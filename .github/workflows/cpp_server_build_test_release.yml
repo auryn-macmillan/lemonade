@@ -281,9 +281,7 @@ jobs:
     name: Sign MSI Installers with SignPath
     runs-on: windows-latest
     needs: build-lemonade-server-installer
-    # Sign on tag pushes (releases) or when manually enabled via workflow_dispatch
-    # Only run if SIGNPATH_API_TOKEN secret is available
-    if: (startsWith(github.ref, 'refs/tags/v') || inputs.enable_signing == true) && secrets.SIGNPATH_API_TOKEN != ''
+    if: false  # Disabled for forks - enable via workflow_dispatch if you have SignPath credentials
     steps:
       - name: Sign MSI Installers with SignPath
         id: sign-msi
@@ -1031,7 +1029,7 @@ jobs:
           sparse-checkout: .github
 
       - name: Download Lemonade Server Installer (Windows)
-        if: secrets.SIGNPATH_API_TOKEN != ''
+        if: false  # Disabled - MSI signing not available for forks
         uses: actions/download-artifact@v4
         with:
           name: Lemonade_Server_MSI_Signed
