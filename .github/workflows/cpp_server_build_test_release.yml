@@ -1035,12 +1035,6 @@ jobs:
           name: lemonade-deb
           path: .
 
-      - name: Download Lemonade macOS .pkg Package
-        uses: actions/download-artifact@v4
-        with:
-          name: lemonade-macos-pkg
-          path: .
-
       - name: Download Lemonade AppImage (Linux)
         uses: actions/download-artifact@v4
         with:
