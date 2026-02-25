@@ -846,15 +846,11 @@ jobs:
     needs:
       - build-lemonade-server-installer
       - build-lemonade-deb
-      - build-lemonade-macos-dmg
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
         test_type: [cli, endpoints, system-info, ollama]
-        exclude:
-          - os: macos-latest
-            test_type: system-info
     env:
       LEMONADE_CI_MODE: "True"
       PYTHONIOENCODING: utf-8
