@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  lemonade:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lemonade-server:custom
+    ports:
+      - "8000:8000"
+    volumes:
+      - models:/root/.cache/huggingface/hub
+      - lemonade-cache:/root/.cache/lemonade
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  models:
+  lemonade-cache:

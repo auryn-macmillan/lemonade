@@ -180,3 +180,8 @@ CLAUDE.*
 # WiX Toolset build artifacts
 *.msi
 *.wixpdb
+
+# Setup-specific files (do not commit)
+recipe_options.json
+user_models.json
+lemonade_build_instructions.md

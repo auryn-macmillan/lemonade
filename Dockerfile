@@ -59,6 +59,14 @@ COPY --from=builder /app/build/resources ./resources
 # Make executables executable
 RUN chmod +x ./lemonade-router ./lemonade-server
 
+# Copy custom llama.cpp assets
+COPY llamacpp/vulkan /lemonade-assets/llamacpp/vulkan
+COPY llamacpp/version.txt /lemonade-assets/llamacpp/version.txt
+
+# Copy custom entrypoint
+COPY custom-entrypoint.sh /usr/local/bin/custom-entrypoint.sh
+RUN chmod +x /usr/local/bin/custom-entrypoint.sh
+
 # Create necessary directories
 RUN mkdir -p /opt/lemonade/llama/cpu \
     /opt/lemonade/llama/vulkan \
@@ -72,4 +80,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/live || exit 1
 
 # Default command: start server in headless mode
+ENTRYPOINT ["/usr/local/bin/custom-entrypoint.sh"]
 CMD ["./lemonade-server", "serve", "--no-tray", "--host", "0.0.0.0"]
