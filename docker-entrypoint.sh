@@ -29,5 +29,8 @@ elif [ -n "$BUNDLED_VERSION" ]; then
     echo "[entrypoint] llama.cpp ${BUNDLED_VERSION} already installed"
 fi
 
+# Ensure llama-server can find its shared libraries when spawned by lemonade
+export LD_LIBRARY_PATH="$CACHE_LLAMA_DIR:${LD_LIBRARY_PATH:-}"
+
 # Execute the main command
 exec "$@"
