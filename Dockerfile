@@ -1,12 +1,57 @@
 # ==============================================================
-# # 1. Build stage — compile lemonade C++ binaries
+# # 1. Build llama.cpp from source with Vulkan support
+# # ============================================================
+FROM ubuntu:24.04 AS llamacpp-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+ARG LLAMACPP_VERSION=b8766
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    ninja-build \
+    git \
+    libvulkan-dev \
+    glslc \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --branch ${LLAMACPP_VERSION} \
+    https://github.com/ggml-org/llama.cpp.git /llama.cpp
+
+WORKDIR /llama.cpp
+
+RUN cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DGGML_VULKAN=ON \
+    -DGGML_NATIVE=OFF \
+    -DGGML_BACKEND_DL=ON \
+    -DGGML_CPU_ALL_VARIANTS=ON \
+    -DLLAMA_BUILD_TESTS=OFF \
+    -DLLAMA_BUILD_EXAMPLES=ON \
+    -DLLAMA_BUILD_SERVER=ON \
+    && cmake --build build --config Release -j$(nproc)
+
+# Collect all needed files into a clean output directory
+RUN mkdir -p /llamacpp-out && \
+    cp build/bin/llama-server /llamacpp-out/ && \
+    cp build/bin/llama-cli /llamacpp-out/ && \
+    cp build/bin/llama-bench /llamacpp-out/ 2>/dev/null || true && \
+    cp build/bin/llama-quantize /llamacpp-out/ 2>/dev/null || true && \
+    cp build/bin/llama-gguf-split /llamacpp-out/ 2>/dev/null || true && \
+    # Copy all shared libraries
+    find build -name "libggml*.so*" -exec cp -a {} /llamacpp-out/ \; && \
+    find build -name "libllama*.so*" -exec cp -a {} /llamacpp-out/ \; && \
+    find build -name "libmtmd*.so*" -exec cp -a {} /llamacpp-out/ \; && \
+    echo "${LLAMACPP_VERSION}" > /llamacpp-out/version.txt
+
+# ==============================================================
+# # 2. Build stage — compile lemonade C++ binaries
 # # ============================================================
 FROM ubuntu:24.04 AS builder
 
-# Avoid interactive prompts during build
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -15,18 +60,14 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libdrm-dev \
     git \
-    nodejs \
-    npm \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy source code
 COPY . /app
 WORKDIR /app
 
-# Build the project
 RUN rm -rf build && \
     cmake --preset default && \
-    cmake --build --preset default web-app
+    cmake --build --preset default
 
 # Debug: Check build outputs
 RUN echo "=== Build directory contents ===" && \
@@ -35,11 +76,10 @@ RUN echo "=== Build directory contents ===" && \
     find build/ -name "*.json" -o -name "resources" -type d
 
 # # ============================================================
-# # 2. Runtime stage — small, clean image
+# # 3. Runtime stage — small, clean image
 # # ============================================================
 FROM ubuntu:24.04
 
-# Install runtime dependencies only
 RUN apt-get update && apt-get install -y \
     libcurl4 \
     curl \
@@ -51,11 +91,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libgomp1 \
     libatomic1 \
-    software-properties-common \
     jq \
     && rm -rf /var/lib/apt/lists/*
-
-RUN add-apt-repository -y ppa:amd-team/xrt
 
 # Create application directory
 WORKDIR /opt/lemonade
@@ -66,27 +103,29 @@ COPY --from=builder /app/build/lemonade-server ./lemonade-server
 COPY --from=builder /app/build/lemonade ./lemonade
 COPY --from=builder /app/build/resources ./resources
 
-# Download and install FLM using version from backend_versions.json
-RUN FLM_VERSION=$(jq -r '.flm.npu' ./resources/backend_versions.json) && \
-    FLM_VERSION_NUM=$(echo $FLM_VERSION | sed 's/^v//') && \
-    curl -L -o fastflowlm.deb "https://github.com/FastFlowLM/FastFlowLM/releases/download/${FLM_VERSION}/fastflowlm_${FLM_VERSION_NUM}_ubuntu24.04_amd64.deb" && \
-    apt install -y ./fastflowlm.deb && \
-    rm fastflowlm.deb
-
 # Make executables executable
-RUN chmod +x ./lemond ./lemonade-server
+RUN chmod +x ./lemond ./lemonade-server ./lemonade
+
+# Copy pre-built llama.cpp vulkan binaries
+COPY --from=llamacpp-builder /llamacpp-out/ /opt/lemonade/llama/vulkan/
+RUN chmod +x /opt/lemonade/llama/vulkan/llama-server \
+    /opt/lemonade/llama/vulkan/llama-cli 2>/dev/null || true
 
 # Create necessary directories
 RUN mkdir -p /opt/lemonade/llama/cpu \
-    /opt/lemonade/llama/vulkan \
-    /root/.cache/huggingface
+    /root/.cache/huggingface \
+    /root/.cache/lemonade/bin/llamacpp/vulkan
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /opt/lemonade/docker-entrypoint.sh
+RUN chmod +x /opt/lemonade/docker-entrypoint.sh
 
 # Expose default port
-EXPOSE 13305
+EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:13305/live || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/live || exit 1
 
-# Default command: start server in headless mode
+ENTRYPOINT ["/opt/lemonade/docker-entrypoint.sh"]
 CMD ["./lemonade-server", "serve", "--no-tray", "--host", "0.0.0.0"]
