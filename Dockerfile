@@ -10,11 +10,11 @@ ARG LLAMACPP_VERSION=b9253
 RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
 
 # Download pre-built Vulkan release from upstream llama.cpp
-RUN curl -L -o /tmp/llamacpp-vulkan.zip \
-    "https://github.com/ggml-org/llama.cpp/releases/download/${LLAMACPP_VERSION}/llama-${LLAMACPP_VERSION}-bin-ubuntu-vulkan-x64.zip" \
+RUN curl -L -o /tmp/llamacpp-vulkan.tar.gz \
+    "https://github.com/ggml-org/llama.cpp/releases/download/${LLAMACPP_VERSION}/llama-${LLAMACPP_VERSION}-bin-ubuntu-vulkan-x64.tar.gz" \
     && mkdir -p /llamacpp-out \
-    && unzip -j /tmp/llamacpp-vulkan.zip -d /llamacpp-out/ \
-    && rm /tmp/llamacpp-vulkan.zip \
+    && tar -xzf /tmp/llamacpp-vulkan.tar.gz -C /llamacpp-out/ \
+    && rm /tmp/llamacpp-vulkan.tar.gz \
     && echo "${LLAMACPP_VERSION}" > /llamacpp-out/version.txt \
     && chmod +x /llamacpp-out/*
 
