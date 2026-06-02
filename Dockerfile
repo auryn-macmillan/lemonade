@@ -34,16 +34,16 @@ RUN apt-get update && apt-get install -y \
     libdrm-dev \
     libcurl4-openssl-dev \
     zlib1g-dev \
-    nodejs \
-    npm \
     git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /app
 WORKDIR /app
 
-RUN cmake --preset default && \
-    cmake --build --preset default
+RUN cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_WEB_APP=OFF \
+    && cmake --build build -j1
 
 # # ============================================================
 # # 3. Runtime stage — small, clean image
