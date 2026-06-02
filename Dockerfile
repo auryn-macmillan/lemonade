@@ -61,7 +61,6 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libgomp1 \
     libatomic1 \
-    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Create application directory
@@ -76,13 +75,8 @@ COPY --from=builder /app/build/lemond ./lemond
 COPY --from=builder /app/build/lemonade ./lemonade
 COPY --from=builder /app/build/resources ./resources
 
-# Download and install FLM using version from backend_versions.json
-RUN FLM_VERSION=$(jq -r '.flm.npu' ./resources/backend_versions.json) && \
-    FLM_VERSION_NUM=$(echo $FLM_VERSION | sed 's/^v//') && \
-    curl -L -o fastflowlm.deb "https://github.com/FastFlowLM/FastFlowLM/releases/download/${FLM_VERSION}/fastflowlm_${FLM_VERSION_NUM}_ubuntu24.04_amd64.deb" && \
-    apt-get update && apt-get install -y libxrt2 libxrt-npu2 && \
-    apt-get install -y ./fastflowlm.deb && \
-    rm fastflowlm.deb
+# Skip FLM/NPU install — not needed for Vulkan backend
+RUN true
 
 # Make executables executable
 RUN chmod +x ./lemond ./lemonade
