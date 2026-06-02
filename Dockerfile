@@ -26,10 +26,11 @@ RUN cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DGGML_VULKAN=ON \
     -DGGML_BACKEND_DL=ON \
+    -DGGML_CPU_ALL_VARIANTS=ON \
     -DLLAMA_BUILD_TESTS=OFF \
     -DLLAMA_BUILD_EXAMPLES=ON \
     -DLLAMA_BUILD_SERVER=ON \
-    && cmake --build build --config Release -j2
+    && cmake --build build --config Release -j1
 
 # Collect all needed files into a clean output directory
 RUN mkdir -p /llamacpp-out && \
