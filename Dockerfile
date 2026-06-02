@@ -1,49 +1,22 @@
 # ==============================================================
-# # 1. Build llama.cpp from source with Vulkan support
-# # ============================================================
+# # 1. Download pre-built llama.cpp Vulkan release
+# # ==============================================================
 FROM ubuntu:24.04 AS llamacpp-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG LLAMACPP_VERSION=b9253
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    ninja-build \
-    git \
-    libvulkan-dev \
-    glslang-dev \
-    glslang-tools \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --depth 1 --branch ${LLAMACPP_VERSION} \
-    https://github.com/ggml-org/llama.cpp.git /llama.cpp
-
-WORKDIR /llama.cpp
-
-RUN cmake -B build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DGGML_VULKAN=ON \
-    -DGGML_BACKEND_DL=ON \
-    -DGGML_CPU_ALL_VARIANTS=ON \
-    -DLLAMA_BUILD_TESTS=OFF \
-    -DLLAMA_BUILD_EXAMPLES=ON \
-    -DLLAMA_BUILD_SERVER=ON \
-    && cmake --build build --config Release -j1
-
-# Collect all needed files into a clean output directory
-RUN mkdir -p /llamacpp-out && \
-    cp build/bin/llama-server /llamacpp-out/ && \
-    cp build/bin/llama-cli /llamacpp-out/ && \
-    cp build/bin/llama-bench /llamacpp-out/ 2>/dev/null || true && \
-    cp build/bin/llama-quantize /llamacpp-out/ 2>/dev/null || true && \
-    cp build/bin/llama-gguf-split /llamacpp-out/ 2>/dev/null || true && \
-    # Copy all shared libraries
-    find build -name "libggml*.so*" -exec cp -a {} /llamacpp-out/ \; && \
-    find build -name "libllama*.so*" -exec cp -a {} /llamacpp-out/ \; && \
-    find build -name "libmtmd*.so*" -exec cp -a {} /llamacpp-out/ \; && \
-    echo "${LLAMACPP_VERSION}" > /llamacpp-out/version.txt
+# Download pre-built Vulkan release from upstream llama.cpp
+RUN curl -L -o /tmp/llamacpp-vulkan.zip \
+    "https://github.com/ggml-org/llama.cpp/releases/download/${LLAMACPP_VERSION}/llama-${LLAMACPP_VERSION}-bin-ubuntu-vulkan-x64.zip" \
+    && mkdir -p /llamacpp-out \
+    && unzip -j /tmp/llamacpp-vulkan.zip -d /llamacpp-out/ \
+    && rm /tmp/llamacpp-vulkan.zip \
+    && echo "${LLAMACPP_VERSION}" > /llamacpp-out/version.txt \
+    && chmod +x /llamacpp-out/*
 
 # ==============================================================
 # # 2. Build stage — compile lemonade C++ binaries
