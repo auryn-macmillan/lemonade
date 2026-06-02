@@ -85,7 +85,7 @@ RUN FLM_VERSION=$(jq -r '.flm.npu' ./resources/backend_versions.json) && \
     rm fastflowlm.deb
 
 # Make executables executable
-RUN chmod +x ./lemond ./lemonade-server ./lemonade
+RUN chmod +x ./lemond ./lemonade
 
 # Copy pre-built llama.cpp vulkan binaries (built from source for TurboQuant + MTP support)
 COPY --from=llamacpp-builder /llamacpp-out/ /opt/lemonade/llama/vulkan/
@@ -114,4 +114,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 # Use custom entrypoint for llamacpp args and model configs
 ENTRYPOINT ["/opt/lemonade/docker-entrypoint.sh"]
-CMD ["./lemonade-server", "serve", "--no-tray", "--host", "0.0.0.0"]
+CMD ["./lemond", "/root/.cache/lemonade", "--host", "0.0.0.0"]
