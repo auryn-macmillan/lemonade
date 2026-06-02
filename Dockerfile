@@ -37,18 +37,13 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     git \
-    python3 \
-    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /app
 WORKDIR /app
 
-# Run setup to install cmake dependencies
-RUN ./setup.sh
-
 RUN cmake --preset default && \
-    cmake --build --preset default -- -j1
+    cmake --build --preset default
 
 # # ============================================================
 # # 3. Runtime stage — small, clean image
