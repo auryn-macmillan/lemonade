@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists
 RUN curl -L -o /tmp/llamacpp-vulkan.tar.gz \
     "https://github.com/ggml-org/llama.cpp/releases/download/${LLAMACPP_VERSION}/llama-${LLAMACPP_VERSION}-bin-ubuntu-vulkan-x64.tar.gz" \
     && mkdir -p /llamacpp-out \
-    && tar -xzf /tmp/llamacpp-vulkan.tar.gz -C /llamacpp-out/ \
+    && tar -xzf /tmp/llamacpp-vulkan.tar.gz --strip-components=1 -C /llamacpp-out/ \
     && rm /tmp/llamacpp-vulkan.tar.gz \
     && echo "${LLAMACPP_VERSION}" > /llamacpp-out/version.txt \
     && chmod +x /llamacpp-out/*
