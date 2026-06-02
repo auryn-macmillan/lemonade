@@ -32,21 +32,23 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     pkg-config \
     libdrm-dev \
+    libcurl4-openssl-dev \
+    zlib1g-dev \
+    nodejs \
+    npm \
     git \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /app
 WORKDIR /app
 
-RUN rm -rf build && \
-    cmake --preset default && \
-    cmake --build --preset default
+# Run setup to install cmake dependencies
+RUN ./setup.sh
 
-# Debug: Check build outputs
-RUN echo "=== Build directory contents ===" && \
-    ls -la build/ && \
-    echo "=== Checking for resources ===" && \
-    find build/ -name "*.json" -o -name "resources" -type d
+RUN cmake --preset default && \
+    cmake --build --preset default -- -j1
 
 # # ============================================================
 # # 3. Runtime stage — small, clean image
