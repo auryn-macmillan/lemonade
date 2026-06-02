@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     git \
     libvulkan-dev \
-    glslc \
+    glslang-dev \
+    glslang-tools \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 --branch ${LLAMACPP_VERSION} \
@@ -24,7 +25,6 @@ WORKDIR /llama.cpp
 RUN cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DGGML_VULKAN=ON \
-    -DGGML_NATIVE=OFF \
     -DGGML_BACKEND_DL=ON \
     -DGGML_CPU_ALL_VARIANTS=ON \
     -DLLAMA_BUILD_TESTS=OFF \
