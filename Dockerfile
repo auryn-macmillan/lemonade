@@ -5,7 +5,7 @@ FROM ubuntu:24.04 AS llamacpp-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG LLAMACPP_VERSION=b8766
+ARG LLAMACPP_VERSION=b9253
 
 RUN apt-get update && apt-get install -y \
     build-essential \
