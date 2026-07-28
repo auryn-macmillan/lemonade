@@ -1,13 +1,76 @@
 #include "lemon_cli/lemonade_client.h"
 #include <httplib.h>
 #include <iostream>
+#include <algorithm>
 #include <iomanip>
+#include <regex>
 #include <sstream>
 #include <nlohmann/json.hpp>
+#include <sstream>
 
 namespace lemonade {
 
 using json = nlohmann::json;
+
+static const int DEFAULT_CONNECTION_TIMEOUT_MS = 30000;
+static const int DEFAULT_READ_TIMEOUT_MS = 30000;
+static const int LONG_TIMEOUT_MS = 86400000;
+static const double UNKNOWN_MODEL_SIZE = 0.0;
+
+static std::regex build_name_filter_regex(const std::string& name_filter) {
+    std::string regex_pattern;
+    regex_pattern.reserve(name_filter.size() * 2);
+
+    for (char ch : name_filter) {
+        switch (ch) {
+            case '*':
+                regex_pattern += ".*";
+                break;
+            case '\\':
+            case '^':
+            case '$':
+            case '.':
+            case '|':
+            case '?':
+            case '+':
+            case '(':
+            case ')':
+            case '[':
+            case ']':
+            case '{':
+            case '}':
+                regex_pattern += '\\';
+                regex_pattern += ch;
+                break;
+            default:
+                regex_pattern += ch;
+                break;
+        }
+    }
+
+    return std::regex(regex_pattern, std::regex_constants::ECMAScript | std::regex_constants::icase);
+}
+
+static bool starts_with(const std::string& value, const std::string& prefix) {
+    return value.rfind(prefix, 0) == 0;
+}
+
+static std::string strip_canonical_prefix(const std::string& model_name) {
+    static const std::vector<std::string> prefixes = {"user.", "extra.", "builtin."};
+    for (const auto& prefix : prefixes) {
+        if (starts_with(model_name, prefix)) {
+            return model_name.substr(prefix.size());
+        }
+    }
+    return model_name;
+}
+
+static int model_source_sort_rank(const std::string& model_name) {
+    if (starts_with(model_name, "user.")) return 1;
+    if (starts_with(model_name, "extra.")) return 2;
+    if (starts_with(model_name, "builtin.")) return 3;
+    return 0;
+}
 
 HttpError::HttpError(int status, std::string body, const std::string& message)
     : std::runtime_error(message), status_code_(status), response_body_(std::move(body)) {}
@@ -20,8 +83,57 @@ const std::string& HttpError::response_body() const {
     return response_body_;
 }
 
-LemonadeClient::LemonadeClient(const std::string& host, int port, const std::string& api_key)
-    : host_(host), port_(port), api_key_(api_key) {}
+void LemonadeClient::parse_target_url(const std::string& input_host, std::string& out_clean_host, int& out_port, bool& out_is_ssl) {
+    std::string remaining = input_host;
+    bool has_scheme = false;
+
+    if (remaining.rfind("https://", 0) == 0) {
+        out_is_ssl = true;
+        remaining = remaining.substr(8);
+        has_scheme = true;
+    } else if (remaining.rfind("http://", 0) == 0) {
+        out_is_ssl = false;
+        remaining = remaining.substr(7);
+        has_scheme = true;
+    }
+
+    // Strip path if present (anything starting with '/')
+    size_t path_pos = remaining.find('/');
+    if (path_pos != std::string::npos) {
+        remaining = remaining.substr(0, path_pos);
+    }
+
+    // Parse port
+    size_t close_bracket = remaining.find(']');
+    size_t colon_pos = std::string::npos;
+    if (remaining.rfind("[", 0) == 0 && close_bracket != std::string::npos) {
+        size_t post_bracket_colon = remaining.find(':', close_bracket);
+        if (post_bracket_colon != std::string::npos) {
+            colon_pos = post_bracket_colon;
+        }
+    } else {
+        colon_pos = remaining.rfind(':');
+    }
+
+    if (colon_pos != std::string::npos) {
+        out_clean_host = remaining.substr(0, colon_pos);
+        std::string port_str = remaining.substr(colon_pos + 1);
+        try {
+            out_port = std::stoi(port_str);
+        } catch (...) {
+        }
+    } else {
+        out_clean_host = remaining;
+        if (has_scheme) {
+            out_port = out_is_ssl ? 443 : 80;
+        }
+    }
+}
+
+LemonadeClient::LemonadeClient(const std::string& host, int port, const std::string& api_key, bool is_ssl)
+    : api_key_(api_key), port_(port), is_ssl_(is_ssl) {
+    parse_target_url(host, host_, port_, is_ssl_);
+}
 
 LemonadeClient::~LemonadeClient() {}
 
@@ -33,9 +145,16 @@ std::string LemonadeClient::normalize_host(const std::string& host) const {
 }
 
 // Helper to create and configure httplib::Client (timeouts in milliseconds)
-static httplib::Client make_client(const std::string& host, int port, const std::string& api_key,
-                                    int connection_timeout_ms = 30000, int read_timeout_ms = 30000) {
-    httplib::Client cli(host, port);
+static httplib::Client make_client(const std::string& host, int port, const std::string& api_key, bool is_ssl,
+                                    time_t connection_timeout_ms = DEFAULT_CONNECTION_TIMEOUT_MS, time_t read_timeout_ms = DEFAULT_READ_TIMEOUT_MS) {
+#ifndef CPPHTTPLIB_MBEDTLS_SUPPORT
+    if (is_ssl) {
+        throw std::runtime_error("HTTPS support is not compiled in this client.");
+    }
+#endif
+    std::string scheme = is_ssl ? "https" : "http";
+    std::string url = scheme + "://" + host + ":" + std::to_string(port);
+    httplib::Client cli(url);
     cli.set_connection_timeout(connection_timeout_ms / 1000, (connection_timeout_ms % 1000) * 1000);
     cli.set_read_timeout(read_timeout_ms / 1000, (read_timeout_ms % 1000) * 1000);
 
@@ -58,12 +177,41 @@ static void assert_http_ok(const httplib::Result& res) {
     }
 }
 
+std::string extract_server_error_message(const HttpError& error) {
+    if (!error.response_body().empty()) {
+        try {
+            auto parsed = json::parse(error.response_body());
+            if (parsed.contains("error") && parsed["error"].is_string()) {
+                return parsed["error"].get<std::string>();
+            }
+        } catch (const json::exception&) {
+        }
+    }
+    return error.what();
+}
+
+static void print_response_warnings(const json& value, const std::string& indent = "") {
+    if (value.contains("warnings") && value["warnings"].is_array()) {
+        for (const auto& warning : value["warnings"]) {
+            if (warning.is_string()) {
+                std::cout << indent << "Warning: " << warning.get<std::string>()
+                          << std::endl;
+            }
+        }
+        return;
+    }
+    if (value.contains("warning") && value["warning"].is_string()) {
+        std::cout << indent << "Warning: " << value["warning"].get<std::string>()
+                  << std::endl;
+    }
+}
+
 // Overloaded make_request with configurable timeouts (in milliseconds)
 std::string LemonadeClient::make_request(const std::string& path, const std::string& method,
                                           const std::string& body, const std::string& content_type,
-                                          int connection_timeout_ms, int read_timeout_ms) const {
+                                          time_t connection_timeout_ms, time_t read_timeout_ms) const {
     std::string normalized_host = normalize_host(host_);
-    httplib::Client cli = make_client(normalized_host, port_, api_key_, connection_timeout_ms, read_timeout_ms);
+    httplib::Client cli = make_client(normalized_host, port_, api_key_, is_ssl_, connection_timeout_ms, read_timeout_ms);
 
     httplib::Result res;
 
@@ -71,6 +219,8 @@ std::string LemonadeClient::make_request(const std::string& path, const std::str
         res = cli.Get(path);
     } else if (method == "POST") {
         res = cli.Post(path, body, content_type);
+    } else if (method == "DELETE") {
+        res = cli.Delete(path);
     } else {
         throw std::runtime_error("Unsupported HTTP method: " + method);
     }
@@ -80,13 +230,23 @@ std::string LemonadeClient::make_request(const std::string& path, const std::str
 
 }
 
-// Helper function to handle SSE streaming response
+// Helper function to handle SSE streaming response. If `should_abort` is
+// non-null and returns true, the content receiver returns `false`, which makes
+// httplib close the connection and return immediately — used to stop streaming
+// responses on Ctrl-C without waiting for the next chunk.
 static httplib::Result handle_sse_stream(httplib::Client& cli, const std::string& path, const std::string& body, const std::string& content_type,
-                              std::function<void(const std::string& event_type, const std::string& event_data)> callback) {
+                              std::function<void(const std::string& event_type, const std::string& event_data)> callback,
+                              std::function<bool()> should_abort = nullptr) {
     std::string buffer;
+    std::string raw_response_body;
+    bool saw_sse_event = false;
 
     auto res = cli.Post(path, httplib::Headers(), body, content_type,
         [&](const char* data, size_t len) {
+            if (should_abort && should_abort()) {
+                return false;
+            }
+            raw_response_body.append(data, len);
             buffer.append(data, len);
 
             size_t pos;
@@ -114,12 +274,20 @@ static httplib::Result handle_sse_stream(httplib::Client& cli, const std::string
                 }
 
                 if (!event_data.empty()) {
+                    saw_sse_event = true;
                     callback(event_type, event_data);
+                    if (should_abort && should_abort()) {
+                        return false;
+                    }
                 }
             }
 
             return true;
         });
+
+    if (res && !saw_sse_event && !raw_response_body.empty()) {
+        res->body = raw_response_body;
+    }
 
     return res;
 }
@@ -128,18 +296,62 @@ static httplib::Result handle_sse_stream(httplib::Client& cli, const std::string
 bool LemonadeClient::make_request(const std::string& path, const std::string& method,
                                    const std::string& body, const std::string& content_type,
                                    std::function<void(const std::string& event_type, const std::string& event_data)> callback,
-                                   int connection_timeout_ms, int read_timeout_ms) const {
+                                   time_t connection_timeout_ms, time_t read_timeout_ms,
+                                   std::function<bool()> should_abort) const {
     std::string normalized_host = normalize_host(host_);
-    httplib::Client cli = make_client(normalized_host, port_, api_key_, connection_timeout_ms, read_timeout_ms);
+    httplib::Client cli = make_client(normalized_host, port_, api_key_, is_ssl_, connection_timeout_ms, read_timeout_ms);
 
     if (method == "POST") {
-        auto res = handle_sse_stream(cli, path, body, content_type, callback);
+        auto res = handle_sse_stream(cli, path, body, content_type, callback, should_abort);
+        // If we deliberately aborted, suppress the "connection closed"-style
+        // error that httplib reports — the caller asked for this.
+        if (should_abort && should_abort()) {
+            return false;
+        }
         assert_http_ok(res);
 
         return true;
     }
 
     throw std::runtime_error("Streaming only supports POST method");
+}
+
+int LemonadeClient::check_model_updates() const {
+    try {
+        std::string response = make_request(
+            "/api/v1/models/check-updates",
+            "POST",
+            "{}",
+            "application/json",
+            DEFAULT_CONNECTION_TIMEOUT_MS,
+            LONG_TIMEOUT_MS);
+        auto result = json::parse(response);
+
+        const auto& models = result.at("models");
+        if (!models.is_array()) {
+            throw std::runtime_error("Server returned an invalid model update response");
+        }
+
+        if (models.empty()) {
+            std::cout << "All downloaded models are up to date." << std::endl;
+            return 0;
+        }
+
+        std::cout << "Updates available for " << models.size() << " model(s):" << std::endl;
+        for (const auto& model : models) {
+            if (model.is_string()) {
+                std::cout << "  - " << model.get<std::string>() << std::endl;
+            }
+        }
+        return 0;
+    } catch (const HttpError& e) {
+        std::cerr << "Error checking model updates: "
+                  << extract_server_error_message(e) << std::endl;
+        return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error checking model updates: " << e.what() << std::endl;
+        return 1;
+    }
 }
 
 int LemonadeClient::status(int display_port) const {
@@ -183,8 +395,13 @@ int LemonadeClient::status(int display_port) const {
             for (const auto& model : json_response["all_models_loaded"]) {
                 if (!model.is_object()) continue;
 
+                std::string model_name = model.value("model_name", "-");
+                if (model.value("pinned", false)) {
+                    model_name += " (pinned)";
+                }
+
                 std::cout << std::left
-                          << std::setw(30) << model.value("model_name", "-")
+                          << std::setw(30) << model_name
                           << std::setw(10) << model.value("type", "-")
                           << std::setw(10) << model.value("device", "-")
                           << std::setw(14) << model.value("recipe", "-")
@@ -200,6 +417,10 @@ int LemonadeClient::status(int display_port) const {
     } catch (const json::exception& e) {
         std::cerr << "Error parsing health response JSON: " << e.what() << std::endl;
         return 1;
+    } catch (const HttpError& e) {
+        std::cerr << "Error fetching health status: " << extract_server_error_message(e)
+                  << std::endl;
+        return 1;
     } catch (const std::exception& e) {
         const std::string error = e.what();
         if (error.find("Connection failed:") == 0) {
@@ -209,6 +430,57 @@ int LemonadeClient::status(int display_port) const {
         }
         return 1;
     }
+}
+
+//Helper functions to calculate the total size of the models in a collection.
+static double get_collection_component_size(const json& model) {
+    if (model.contains("recipe") && model["recipe"].is_string() && model["recipe"].get<std::string>() == "cloud") {
+        return UNKNOWN_MODEL_SIZE;
+    }
+    if (model.contains("size") &&
+            model["size"].is_number()) {
+        return model["size"].get<double>();
+    }
+    return UNKNOWN_MODEL_SIZE;
+}
+
+static std::vector<double> get_collection_sizes(const json& collection_components, const json& server_models) {
+    std::vector<double> collection_sizes;
+    double component_size = UNKNOWN_MODEL_SIZE;
+    for (const auto component : collection_components){
+        component_size = UNKNOWN_MODEL_SIZE;
+        for (const auto& model : server_models) {
+            if (model.contains("id") && model["id"].get<std::string>() == component) {
+                component_size = get_collection_component_size(model);
+                break;
+            }
+        }
+        collection_sizes.push_back(component_size);
+    }
+    return collection_sizes;
+}
+
+static std::string model_size_to_str(const ModelInfo& model) {
+    double size = UNKNOWN_MODEL_SIZE;
+    bool is_aprox_size = false;
+
+    for(double component_size : model.component_sizes) {
+        if (component_size == UNKNOWN_MODEL_SIZE) {
+            is_aprox_size = true;
+        } else {
+            size += component_size;
+        }
+    }
+    std::ostringstream os;
+    if (size == UNKNOWN_MODEL_SIZE) {
+        os << "N/A";
+    } else {
+        if (is_aprox_size) {
+            os << ">";
+        }
+        os << std::fixed << std::setprecision(2) << size;
+    }
+    return os.str();
 }
 
 std::vector<ModelInfo> LemonadeClient::get_models(bool show_all) const {
@@ -252,12 +524,20 @@ std::vector<ModelInfo> LemonadeClient::get_models(bool show_all) const {
                     }
                 }
             }
+            if (model_item.contains("components") && model_item["components"].is_array() && !model_item["components"].empty()) {
+                info.component_sizes=get_collection_sizes(model_item["components"], json_response["data"]);
+            } else {
+                info.component_sizes.push_back(get_collection_component_size(model_item));
+            }
 
             if (!info.id.empty()) {
                 models.push_back(info);
             }
         }
 
+    } catch (const HttpError& e) {
+        std::cerr << "Error listing models: " << extract_server_error_message(e) << std::endl;
+        return {};
     } catch (const json::exception& e) {
         std::cerr << "Error parsing models JSON: " << e.what() << std::endl;
     }
@@ -265,32 +545,101 @@ std::vector<ModelInfo> LemonadeClient::get_models(bool show_all) const {
     return models;
 }
 
-int LemonadeClient::list_models(bool show_all) const {
+int LemonadeClient::list_models(bool show_all, const std::string& name_filter) const {
     try {
         std::vector<ModelInfo> models = get_models(show_all);
 
+        if (!name_filter.empty()) {
+            const std::regex filter_regex = build_name_filter_regex(name_filter);
+            models.erase(
+                std::remove_if(models.begin(), models.end(),
+                    [&](const ModelInfo& m) {
+                        return !std::regex_search(m.id, filter_regex) &&
+                               !std::regex_search(strip_canonical_prefix(m.id), filter_regex);
+                    }),
+                models.end());
+        }
+
+        std::sort(models.begin(), models.end(),
+            [](const ModelInfo& a, const ModelInfo& b) {
+                const std::string bare_a = strip_canonical_prefix(a.id);
+                const std::string bare_b = strip_canonical_prefix(b.id);
+                const int bare_compare = bare_a.compare(bare_b);
+                if (bare_compare != 0) return bare_compare < 0;
+
+                const int source_compare = model_source_sort_rank(a.id) - model_source_sort_rank(b.id);
+                if (source_compare != 0) return source_compare < 0;
+
+                return a.id < b.id;
+            });
+
         if (models.empty()) {
-            std::cout << "No models available" << std::endl;
+            std::cout << (show_all ? "No models available" : "No local models downloaded.") << std::endl;
             return 0;
         }
 
-        std::cout << std::left << std::setw(40) << "Model Name"
-                  << std::setw(12) << "Downloaded"
-                  << "Details" << std::endl;
-        std::cout << std::string(100, '-') << std::endl;
+        // Helper lambda to print a formatted table of models.
+        auto print_model_table = [](const std::vector<ModelInfo>& models) {
+            std::cout << std::left << std::setw(40) << "Model Name"
+                      << std::setw(15) << "Downloaded"
+                      << std::setw(15) << "Size (GB)"
+                      << "Details" << std::endl;
+            std::cout << std::string(100, '-') << std::endl;
 
-        for (const auto& model : models) {
-            std::string downloaded = model.downloaded ? "Yes" : "No";
-            std::string details = model.recipe.empty() ? "-" : model.recipe;
+            // Model Name is the API id emitted verbatim by `/v1/models`. For each
+            // bare name, the precedence-winning source (registered > imported >
+            // builtin) shows as the bare name; any shadowed sources show as their
+            // canonical id (user.NAME / extra.NAME / builtin.NAME). Either form is
+            // valid input to `lemonade load`, `lemonade delete`, etc., so the
+            // column is always copy-paste-safe.
+            for (const auto& model : models) {
+                std::string downloaded = model.downloaded ? "Yes" : "No";
+                std::string details = model.recipe.empty() ? "-" : model.recipe;
+                std::cout   << std::left << std::setw(40) << model.id
+                            << std::setw(15) << downloaded;
+                std::cout   << std::right << std::setw(8) << model_size_to_str(model) << std::setw(7) << " ";
+                std::cout   << std::setw(20) << std::left << details << std::endl;
+            }
 
-            std::cout << std::left << std::setw(40) << model.id
-                      << std::setw(12) << downloaded
-                      << details << std::endl;
+            std::cout << std::string(100, '-') << std::endl;
+        };
+
+        if (!show_all) {
+            print_model_table(models);
+            return 0;
         }
 
-        std::cout << std::string(100, '-') << std::endl;
+        std::vector<ModelInfo> local_models;
+        std::vector<ModelInfo> available_models;
+        for (const auto& model : models) {
+            if (model.downloaded) {
+                local_models.push_back(model);
+            } else {
+                available_models.push_back(model);
+            }
+        }
+
+        std::cout << "Local" << std::endl;
+        if (local_models.empty()) {
+            std::cout << "No local models downloaded." << std::endl;
+        } else {
+            print_model_table(local_models);
+        }
+
+        std::cout << std::endl;
+
+        std::cout << "Available for Download" << std::endl;
+        if (available_models.empty()) {
+            std::cout << "No models available for download." << std::endl;
+        } else {
+            print_model_table(available_models);
+        }
+
         return 0;
 
+    } catch (const HttpError& e) {
+        std::cerr << "Error listing models: " << extract_server_error_message(e) << std::endl;
+        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error listing models: " << e.what() << std::endl;
         return 1;
@@ -409,7 +758,7 @@ static bool parse_sse_progress(const std::string& event_data, StreamingRequestSt
     }
 }
 
-int LemonadeClient::pull_model(const json& model_data) {
+int LemonadeClient::pull_model(const json& model_data, const std::string& display_name, bool upgrade) {
     try {
         // Validate that model field exists in model_data
         if (!model_data.contains("model_name") || !model_data["model_name"].is_string()) {
@@ -418,10 +767,19 @@ int LemonadeClient::pull_model(const json& model_data) {
         }
 
         std::string model_name = model_data["model_name"].get<std::string>();
-        std::cout << "Pulling model: " << model_name << std::endl;
+        std::string output_name = display_name.empty() ? model_name : display_name;
+        std::cout << "Pulling model: " << output_name << std::endl;
 
         json request_body = model_data;
         request_body["stream"] = true;
+
+        // Cache-first by default: an already-downloaded model is reused instead
+        // of triggering a remote-registry update check (and a possible full
+        // re-download). Only the explicit `lemonade pull` update flow opts into
+        // an upgrade. An explicit field already in model_data wins.
+        if (!request_body.contains("do_not_upgrade")) {
+            request_body["do_not_upgrade"] = !upgrade;
+        }
 
         std::string body = request_body.dump();
 
@@ -435,8 +793,11 @@ int LemonadeClient::pull_model(const json& model_data) {
             } else if (event_type == "error") {
                 try {
                     auto error_json = json::parse(event_data);
-                    if (error_json.contains("error")) {
+                    if (error_json.contains("error") && error_json["error"].is_string()) {
                         state.error_message = error_json["error"].get<std::string>();
+                    }
+                    if (error_json.contains("code") && error_json["code"].is_string()) {
+                        state.error_code = error_json["code"].get<std::string>();
                     }
                 } catch (...) {
                     state.error_message = event_data;
@@ -444,9 +805,18 @@ int LemonadeClient::pull_model(const json& model_data) {
             } else {
                 parse_sse_progress(event_data, state);
             }
-        }, 86400000, 30000);
+        }, LONG_TIMEOUT_MS, LONG_TIMEOUT_MS);
 
         if (!state.success) {
+            // Wire-protocol constant; server-side definition and contract live in
+            // include/lemon/model_manager.h (kUnknownModelErrorCode). Keep in sync.
+            if (state.error_code == "unknown_model") {
+                state.error_message =
+                    "No built-in model with the name '" + model_name + "' is registered.\n\n"
+                    "If you meant a built-in model, run `lemonade list` to see available models.\n"
+                    "If you meant to add a custom model from Hugging Face or ModelScope, run `lemonade pull CHECKPOINT`.";
+            }
+
             if (!state.error_message.empty()) {
                 throw std::runtime_error(state.error_message);
             }
@@ -454,8 +824,11 @@ int LemonadeClient::pull_model(const json& model_data) {
             throw std::runtime_error("Model pull failed");
         }
 
-        std::cout << "Model pulled successfully: " << model_name << std::endl;
+        std::cout << "Model pulled successfully: " << output_name << std::endl;
         return 0;
+    } catch (const HttpError& e) {
+        std::cerr << "Error pulling model: " << extract_server_error_message(e) << std::endl;
+        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error pulling model: " << e.what() << std::endl;
         return 1;
@@ -478,6 +851,9 @@ int LemonadeClient::delete_model(const std::string& model_name) const {
             return 1;
         }
 
+    } catch (const HttpError& e) {
+        std::cerr << "Error deleting model: " << extract_server_error_message(e) << std::endl;
+        return 1;
     } catch (const json::exception& e) {
         std::cerr << "Error parsing delete response JSON: " << e.what() << std::endl;
         return 1;
@@ -487,21 +863,88 @@ int LemonadeClient::delete_model(const std::string& model_name) const {
     }
 }
 
-int LemonadeClient::load_model(const std::string& model_name, const nlohmann::json& recipe_options, bool save_options) const {
+int LemonadeClient::cleanup_cache(bool dry_run) const {
+    std::cout << (dry_run ? "Previewing" : "Running") << " cache cleanup..." << std::endl;
+
+    try {
+        json request_body = {{"dry_run", dry_run}};
+        std::string response = make_request("/internal/cleanup-cache", "POST",
+            request_body.dump(), "application/json", 30, 300);
+
+        auto result = json::parse(response);
+
+        if (result.contains("error")) {
+            std::cerr << "Error: " << result["error"].value("message", "Unknown error") << std::endl;
+            return 1;
+        }
+
+        auto orphaned = result.value("orphaned_files", json::array());
+        size_t total_bytes = result.value("total_bytes", 0);
+
+        if (orphaned.empty()) {
+            std::cout << "No orphaned files found. Cache is clean." << std::endl;
+            return 0;
+        }
+
+        for (const auto& file : orphaned) {
+            std::string path = file.value("path", "");
+            size_t size = file.value("size", 0);
+            std::string model = file.value("model", "");
+            double size_mb = size / (1024.0 * 1024.0);
+            std::cout << "  " << path << " (" << std::fixed << std::setprecision(1) << size_mb << " MB)"
+                      << " [from " << model << "]" << std::endl;
+        }
+
+        double total_mb = total_bytes / (1024.0 * 1024.0);
+        if (dry_run) {
+            std::cout << "\nWould free " << std::fixed << std::setprecision(1) << total_mb << " MB from "
+                      << orphaned.size() << " file(s). Run without --dry-run to delete." << std::endl;
+        } else {
+            std::cout << "\nFreed " << std::fixed << std::setprecision(1) << total_mb << " MB from "
+                      << orphaned.size() << " file(s)." << std::endl;
+        }
+
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+}
+
+int LemonadeClient::load_model(const std::string& model_name, const nlohmann::json& recipe_options, bool save_options, std::optional<bool> pinned) const {
     std::cout << "Loading model: " << model_name << std::endl;
 
     try {
         json request_body = recipe_options;
         request_body["model_name"] = model_name;
         request_body["save_options"] = save_options;
+        if (pinned.has_value()) {
+            request_body["pinned"] = pinned.value();
+        }
 
-        make_request("/api/v1/load", "POST", request_body.dump(), "application/json");
+        // since load can trigger a pull but doesn't send the related streaming events, we want long read timeouts.
+        make_request("/api/v1/load", "POST", request_body.dump(), "application/json", LONG_TIMEOUT_MS, LONG_TIMEOUT_MS);
 
         std::cout << "Model loaded successfully!" << std::endl;
         return 0;
 
+    } catch (const HttpError& e) {
+        std::cerr << "Error loading model: " << extract_server_error_message(e) << std::endl;
+        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error loading model: " << e.what() << std::endl;
+        return 1;
+    }
+}
+
+int LemonadeClient::pin_model(const std::string& model_name, bool pinned) const {
+    try {
+        json request_body = {{"model_name", model_name}, {"pinned", pinned}};
+        make_request("/internal/pin", "POST", request_body.dump(), "application/json");
+        std::cout << "Model " << (pinned ? "pinned" : "unpinned") << " successfully!" << std::endl;
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
 }
@@ -522,6 +965,9 @@ int LemonadeClient::unload_model(const std::string& model_name) const {
         std::cout << "Model unloaded successfully!" << std::endl;
         return 0;
 
+    } catch (const HttpError& e) {
+        std::cerr << "Error unloading model: " << extract_server_error_message(e) << std::endl;
+        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error unloading model: " << e.what() << std::endl;
         return 1;
@@ -532,6 +978,9 @@ nlohmann::json LemonadeClient::get_model_info(const std::string& model_name) con
     try {
         std::string response = make_request("/api/v1/models/" + model_name);
         return json::parse(response);
+    } catch (const HttpError& e) {
+        std::cerr << "Error fetching model info: " << extract_server_error_message(e) << std::endl;
+        return json{};
     } catch (const json::exception& e) {
         std::cerr << "Error parsing model info JSON: " << e.what() << std::endl;
         return json{};
@@ -541,7 +990,7 @@ nlohmann::json LemonadeClient::get_model_info(const std::string& model_name) con
     }
 }
 
-int LemonadeClient::list_recipes() const {
+int LemonadeClient::list_recipes(bool show_all) const {
     try {
         std::string response = make_request("/api/v1/system-info");
         auto json_response = json::parse(response);
@@ -596,11 +1045,13 @@ int LemonadeClient::list_recipes() const {
             bool first_backend = true;
 
             if (recipe.backends.empty()) {
-                std::cout << std::left << std::setw(20) << recipe.name
-                          << std::setw(12) << "-"
-                          << std::setw(16) << "unsupported"
-                          << std::setw(46) << "No backend definitions"
-                          << "-" << std::endl;
+                if (show_all) {
+                    std::cout << std::left << std::setw(20) << recipe.name
+                            << std::setw(12) << "-"
+                            << std::setw(16) << "unsupported"
+                            << std::setw(46) << "No backend definitions"
+                            << "-" << std::endl;
+                }
             } else {
                 for (const auto& backend : recipe.backends) {
                     std::string recipe_col = first_backend ? recipe.name : "";
@@ -615,14 +1066,15 @@ int LemonadeClient::list_recipes() const {
                         info_col = "-";
                     }
                     std::string action_col = backend.action.empty() ? "-" : backend.action;
+                    if (show_all || status_str != "unsupported") {
+                        std::cout << std::left << std::setw(20) << recipe_col
+                                << std::setw(12) << backend.name
+                                << std::setw(16) << status_str
+                                << std::setw(46) << info_col
+                                << " " << action_col << std::endl;
 
-                    std::cout << std::left << std::setw(20) << recipe_col
-                              << std::setw(12) << backend.name
-                              << std::setw(16) << status_str
-                              << std::setw(46) << info_col
-                              << " " << action_col << std::endl;
-
-                    first_backend = false;
+                        first_backend = false;
+                    }
                 }
             }
         }
@@ -630,18 +1082,22 @@ int LemonadeClient::list_recipes() const {
         std::cout << std::string(148, '-') << std::endl;
         return 0;
 
+    } catch (const HttpError& e) {
+        std::cerr << "Error listing recipes: " << extract_server_error_message(e) << std::endl;
+        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error listing recipes: " << e.what() << std::endl;
         return 1;
     }
 }
 
-int LemonadeClient::install_backend(const std::string& recipe, const std::string& backend) {
+int LemonadeClient::install_backend(const std::string& recipe, const std::string& backend, bool force) {
     std::cout << "Installing backend: " << recipe << ":" << backend << std::endl;
 
     try {
         json request_body = {{"recipe", recipe}, {"backend", backend}};
         request_body["stream"] = true;
+        request_body["force"] = force;
         std::string body = request_body.dump();
 
         StreamingRequestState state;
@@ -664,7 +1120,7 @@ int LemonadeClient::install_backend(const std::string& recipe, const std::string
             } else {
                 parse_sse_progress(event_data, state);
             }
-        }, 86400000, 30000);
+        }, LONG_TIMEOUT_MS, LONG_TIMEOUT_MS);
         if (!state.success) {
             if (!state.error_message.empty()) {
                 throw std::runtime_error(state.error_message);
@@ -674,6 +1130,9 @@ int LemonadeClient::install_backend(const std::string& recipe, const std::string
 
         std::cout << "Backend installed successfully: " << recipe << ":" << backend << std::endl;
         return 0;
+    } catch (const HttpError& e) {
+        std::cerr << "Error: " << extract_server_error_message(e) << std::endl;
+        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
@@ -696,11 +1155,180 @@ int LemonadeClient::uninstall_backend(const std::string& recipe, const std::stri
             return 1;
         }
 
+    } catch (const HttpError& e) {
+        std::cerr << "Error uninstalling backend: " << extract_server_error_message(e)
+                  << std::endl;
+        return 1;
     } catch (const json::exception& e) {
         std::cerr << "Error parsing uninstall response JSON: " << e.what() << std::endl;
         return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error uninstalling backend: " << e.what() << std::endl;
+        return 1;
+    }
+}
+
+int LemonadeClient::install_cloud_provider(const std::string& provider,
+                                            const std::string& base_url,
+                                            const std::string& api_key,
+                                            bool allow_insecure_http) {
+    std::cout << "Installing cloud provider: " << provider
+              << " (" << base_url << ")" << std::endl;
+    try {
+        json body = {
+            {"backend", "cloud"},
+            {"provider", provider},
+            {"base_url", base_url}
+        };
+        if (allow_insecure_http) {
+            body["allow_insecure_http"] = true;
+        }
+        if (!api_key.empty()) {
+            body["api_key"] = api_key;
+        }
+        std::string response = make_request("/api/v1/install", "POST",
+                                             body.dump(), "application/json");
+        auto response_json = json::parse(response);
+        if (response_json.value("status", "") != "success") {
+            std::cerr << "Install failed: " << response << std::endl;
+            return 1;
+        }
+        std::cout << "Cloud provider installed: " << provider << std::endl;
+        if (response_json.contains("auth_state")) {
+            const auto& s = response_json["auth_state"];
+            bool env = s.value("env_var_set", false);
+            bool rt = s.value("runtime_key_set", false);
+            std::cout << "  env var set: " << (env ? "yes" : "no")
+                      << ", runtime key set: " << (rt ? "yes" : "no")
+                      << std::endl;
+        }
+        if (response_json.contains("models_discovered")) {
+            std::cout << "  models discovered: "
+                      << response_json["models_discovered"].get<size_t>()
+                      << std::endl;
+        }
+        print_response_warnings(response_json);
+        return 0;
+    } catch (const HttpError& e) {
+        std::cerr << "Error installing cloud provider: "
+                  << extract_server_error_message(e) << std::endl;
+        return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error installing cloud provider: " << e.what() << std::endl;
+        return 1;
+    }
+}
+
+int LemonadeClient::uninstall_cloud_provider(const std::string& provider) {
+    std::cout << "Uninstalling cloud provider: " << provider << std::endl;
+    try {
+        json body = {{"backend", "cloud"}, {"provider", provider}};
+        std::string response = make_request("/api/v1/uninstall", "POST",
+                                             body.dump(), "application/json");
+        auto response_json = json::parse(response);
+        if (response_json.value("status", "") != "success") {
+            std::cerr << "Uninstall failed: " << response << std::endl;
+            return 1;
+        }
+        std::cout << "Cloud provider uninstalled: " << provider
+                  << " (evicted "
+                  << response_json.value("models_evicted", size_t{0})
+                  << " models)" << std::endl;
+        return 0;
+    } catch (const HttpError& e) {
+        std::cerr << "Error uninstalling cloud provider: "
+                  << extract_server_error_message(e) << std::endl;
+        return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error uninstalling cloud provider: " << e.what() << std::endl;
+        return 1;
+    }
+}
+
+int LemonadeClient::cloud_auth(const std::string& provider,
+                               const std::string& api_key,
+                               bool allow_insecure_http) {
+    try {
+        json body = {{"provider", provider}, {"api_key", api_key}};
+        if (allow_insecure_http) {
+            body["allow_insecure_http"] = true;
+        }
+        std::string response = make_request("/api/v1/cloud/auth", "POST",
+                                             body.dump(), "application/json");
+        auto response_json = json::parse(response);
+        std::cout << "Cloud auth set for: " << provider << std::endl;
+        if (response_json.contains("models_discovered")) {
+            std::cout << "  models discovered: "
+                      << response_json["models_discovered"].get<size_t>()
+                      << std::endl;
+        }
+        print_response_warnings(response_json);
+        return 0;
+    } catch (const HttpError& e) {
+        // 409 (env conflict) and 404 (not installed) come through here with
+        // a structured error body — extract_server_error_message pulls the
+        // message field out.
+        std::cerr << "Error setting cloud auth: "
+                  << extract_server_error_message(e) << std::endl;
+        return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error setting cloud auth: " << e.what() << std::endl;
+        return 1;
+    }
+}
+
+int LemonadeClient::cloud_auth_clear(const std::string& provider) {
+    try {
+        std::string response = make_request("/api/v1/cloud/auth/" + provider,
+                                             "DELETE", "", "");
+        auto response_json = json::parse(response);
+        bool cleared = response_json.value("cleared_runtime_key", false);
+        std::cout << "Cloud auth cleared for: " << provider
+                  << (cleared ? "" : " (no runtime key was set)") << std::endl;
+        return 0;
+    } catch (const HttpError& e) {
+        std::cerr << "Error clearing cloud auth: "
+                  << extract_server_error_message(e) << std::endl;
+        return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error clearing cloud auth: " << e.what() << std::endl;
+        return 1;
+    }
+}
+
+int LemonadeClient::cloud_list() const {
+    try {
+        std::string response = make_request("/api/v1/system-info", "GET");
+        auto info = json::parse(response);
+        if (!info.contains("cloud") || !info["cloud"].contains("providers")) {
+            std::cout << "No cloud providers installed." << std::endl;
+            return 0;
+        }
+        const auto& providers = info["cloud"]["providers"];
+        if (providers.empty()) {
+            std::cout << "No cloud providers installed." << std::endl;
+            return 0;
+        }
+        std::cout << "Cloud providers:" << std::endl;
+        for (const auto& p : providers) {
+            std::cout << "  " << p.value("name", "")
+                      << "  " << p.value("base_url", "")
+                      << "  [env_var=" << p.value("env_var", "") << "]"
+                      << std::endl;
+            std::cout << "    auth: "
+                      << "env_var_set=" << (p.value("env_var_set", false) ? "yes" : "no")
+                      << ", runtime_key_set=" << (p.value("runtime_key_set", false) ? "yes" : "no")
+                      << ", models_discovered=" << p.value("models_discovered", size_t{0})
+                      << std::endl;
+            print_response_warnings(p, "    ");
+        }
+        return 0;
+    } catch (const HttpError& e) {
+        std::cerr << "Error listing cloud providers: "
+                  << extract_server_error_message(e) << std::endl;
+        return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error listing cloud providers: " << e.what() << std::endl;
         return 1;
     }
 }

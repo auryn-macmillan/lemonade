@@ -3,6 +3,7 @@
 #include <string>
 #include <shared_mutex>
 #include <functional>
+#include <vector>
 #include <nlohmann/json.hpp>
 
 namespace lemon {
@@ -10,8 +11,9 @@ namespace lemon {
 using json = nlohmann::json;
 
 // Callback invoked after config changes are applied (outside the lock).
-// Receives the set of keys that changed.
-using ConfigSideEffectCallback = std::function<void(const std::vector<std::string>& changed_keys)>;
+// Receives a nested JSON object containing only the entries that actually
+// changed (mirrors the input shape, e.g. {"port": 9000, "llamacpp": {"vulkan_bin": "latest"}}).
+using ConfigSideEffectCallback = std::function<void(const json& applied_changes)>;
 
 class RuntimeConfig {
 public:
@@ -30,11 +32,36 @@ public:
     int max_loaded_models() const;
     std::string models_dir() const;
     int ctx_size() const;
+    bool auto_evict() const;
+    double auto_evict_threshold_pct() const;
+    bool inhibit_suspend() const;
+
+    // Telemetry settings
+    bool telemetry_enabled() const;
+    bool telemetry_hide_inputs() const;
+    bool telemetry_hide_outputs() const;
+    bool telemetry_hide_thinking() const;
+    bool telemetry_trust_incoming_trace_context() const;
+    int telemetry_max_queue_capacity() const;
+    int telemetry_max_attribute_length() const;
+    std::string telemetry_otlp_endpoint() const;
+    std::string telemetry_otlp_protocol() const;
+    std::vector<std::string> telemetry_otlp_semantics() const;
+    std::map<std::string, std::string> telemetry_otlp_headers() const;
+    int telemetry_otlp_max_retries() const;
+    double telemetry_otlp_retry_backoff_base_s() const;
+    int telemetry_otlp_send_batch_size() const;
+    double telemetry_otlp_batch_timeout_s() const;
+
 
     // Feature flags
     bool offline() const;
+    bool auto_check_model_updates() const;
+    bool no_fetch_executables() const;
     bool disable_model_filtering() const;
     bool enable_dgpu_gtt() const;
+    std::string rocm_channel() const;
+    std::string rocm_channel_for_recipe(const std::string& recipe) const;
 
     // Backend settings (nested)
     json backend_config(const std::string& backend_name) const;
@@ -46,11 +73,11 @@ public:
     /// Returns recipe options in the flat format that RecipeOptions/backends expect.
     /// Maps nested config to flat keys: llamacpp.backend -> llamacpp_backend,
     /// sdcpp.steps -> steps, etc.
-    json recipe_options() const;
+    json recipe_options(const std::string& backend) const;
 
     // --- Unified setter ---
     // Validates and applies changes, then calls side_effect_cb (outside lock)
-    // with the list of keys that actually changed.
+    // with a nested JSON of entries that actually changed.
     // Accepts nested JSON: {"llamacpp": {"backend": "vulkan"}} merges into
     // the llamacpp section rather than replacing it.
     // Returns JSON: {"status":"success","updated":{...}} or throws on validation error.
@@ -82,8 +109,13 @@ public:
     static void validate_backend_choice(const std::string& config_section,
                                         const std::string& value);
 
-    /// Validate that a *_bin config value is "builtin" or an existing file path.
-    /// Throws std::invalid_argument if the path does not exist.
+    /// Validate a *_bin config value. Accepts:
+    ///   - "" or "builtin" — use the lemonade-pinned version
+    ///   - "latest"        — resolve to most-recent upstream release at lemond start
+    ///   - "b8664" / "v1.8.2" / etc. — a specific upstream release tag (verbatim)
+    ///   - "/path/to/bin"  — an existing pre-downloaded binary directory
+    /// Throws std::invalid_argument when the value looks like a path but the
+    /// path does not exist.
     static void validate_bin_path(const std::string& config_section,
                                   const std::string& key,
                                   const std::string& value);
@@ -96,8 +128,17 @@ private:
     void validate_backend(const std::string& backend, const std::string& key,
                           const json& value) const;
 
-    // Collect changed keys (including nested paths like "llamacpp") into changed_keys.
-    void apply_changes(const json& changes, std::vector<std::string>& changed_keys);
+    // Apply changes and emit the subset that actually differed from the previous
+    // state into `applied_diff`. Mirrors the shape of `changes` (nested for
+    // backend sections).
+    void apply_changes(const json& changes, json& applied_diff);
+
+    // Helpers to retrieve configuration options with environment variable override
+    // and fallback to config JSON under a shared lock.
+    bool get_bool_opt(const char* env_name, const std::vector<std::string>& path, bool default_val) const;
+    int get_int_opt(const char* env_name, const std::vector<std::string>& path, int default_val) const;
+    double get_double_opt(const char* env_name, const std::vector<std::string>& path, double default_val) const;
+    std::string get_string_opt(const char* env_name, const std::vector<std::string>& path, const std::string& default_val) const;
 
     mutable std::shared_mutex mutex_;
 

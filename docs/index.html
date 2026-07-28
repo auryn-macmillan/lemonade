@@ -5,306 +5,216 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lemonade: Local AI for Text, Images, and Speech</title>
   <link rel="icon" href="./favicon.ico">
-  <link rel="stylesheet" href="assets/website-styles.css">
+  <link rel="stylesheet" href="assets/website-styles.css?v=responsive-polish-3">
+  <link rel="stylesheet" href="assets/persona-demo.css?v=responsive-polish-3">
+  <link rel="stylesheet" href="assets/flowchart.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;450;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="navbar-placeholder"></div>
 
   <main class="main hp-main">
-    <!-- ==================== HERO ==================== -->
-    <section class="hp-hero">
-      <div class="hp-hero-left">
-        <h1 class="hp-headline">
-          <span class="hp-headline-top">Refreshingly fast <span class="hp-carousel-wrap" aria-live="polite">
-            <span class="hp-carousel-sizer" aria-hidden="true">images</span>
-            <span class="hp-carousel-track" id="hpCarouselTrack" aria-hidden="true">
-              <span class="hp-carousel-slot" id="hpCarouselCurrent">LLMs</span>
-              <span class="hp-carousel-slot" id="hpCarouselNext"></span>
-            </span>
-          </span></span>
-          <br>on GPUs and NPUs
-        </h1>
-        <div class="hp-subtitle-group">
-          <p class="hp-subtitle">Open source. Private. Ready in minutes on any PC.</p>
-          <div class="hp-cta-row">
-            <a class="download-btn" href="https://github.com/lemonade-sdk/lemonade/releases/latest/download/lemonade.msi">
-              Download<br>
-              <span class="download-sub">for Windows 11</span>
+    <!-- ==================== PERSONA PROMISE ==================== -->
+    <section class="hp-persona-promise hp-reveal" aria-labelledby="personaHeroTitle">
+      <h1 class="hp-persona-title" id="personaHeroTitle">
+        <span class="hp-persona-title-line">Refreshingly open</span>
+        <span class="hp-persona-title-line">intelligence<span class="hp-persona-period">.</span></span>
+      </h1>
+      <p class="hp-persona-subtitle" id="personaHeroSubtitle">
+        <span class="hp-persona-subtitle-line">Lemonade makes local AI the new default for apps and agents:</span>
+        <span class="hp-persona-subtitle-line">free to use, private by design, and built for flexibility by a welcoming community.</span>
+      </p>
+      <div class="hp-community-strip" aria-label="Community links">
+        <a class="hp-community-chip" href="https://discord.gg/5xXzkMu8Zk" target="_blank" rel="noopener" title="Join the Discord" aria-label="Join the Discord">
+          <svg viewBox="1 1.8 20 20" fill="currentColor" aria-hidden="true"><path d="M19.54 5.33A16.9 16.9 0 0 0 15.33 4l-.2.38c1.46.36 2.14.88 2.14.88a14.5 14.5 0 0 0-6.77-.26 12.3 12.3 0 0 0-3.77.26s.7-.55 2.25-.9L8.84 4a17 17 0 0 0-4.22 1.33C1.95 9.3 1.22 13.17 1.58 17c1.78 1.3 3.5 2.1 5.2 2.62l.63-.85a6.8 6.8 0 0 1-1.64-.78l.4-.3c3.16 1.48 6.6 1.48 9.72 0l.4.3c-.52.32-1.06.58-1.64.78l.63.85c1.7-.52 3.43-1.31 5.2-2.62.43-4.43-.72-8.26-2.94-11.67ZM8.52 14.64c-.95 0-1.73-.88-1.73-1.96s.76-1.96 1.73-1.96c.96 0 1.75.88 1.73 1.96 0 1.08-.77 1.96-1.73 1.96Zm6.96 0c-.95 0-1.73-.88-1.73-1.96s.76-1.96 1.73-1.96c.96 0 1.74.88 1.73 1.96 0 1.08-.77 1.96-1.73 1.96Z"></path></svg>
+          <span class="hp-community-chip-stat"><span data-community-stat="discord-online">&hellip;</span> online</span>
+        </a>
+        <a class="hp-community-chip" href="https://github.com/lemonade-sdk/lemonade" target="_blank" rel="noopener" title="Star the GitHub" aria-label="Star the GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.79 23.38c.6.11.82-.26.82-.58v-2.17c-3.34.73-4.04-1.42-4.04-1.42-.55-1.4-1.34-1.77-1.34-1.77-1.1-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.08 1.85 2.83 1.32 3.52 1 .11-.78.42-1.32.76-1.62-2.66-.3-5.46-1.33-5.46-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.02 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.63-5.47 5.93.43.37.81 1.1.81 2.22v3.3c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z"></path></svg>
+          <span class="hp-community-chip-stat"><span data-community-stat="github">&hellip;</span> stars</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ==================== HERO PERSONA SWITCH ==================== -->
+    <section class="hp-section hp-cta-section hp-reveal" id="hero-cta">
+      <p class="hp-cta-lead">
+        Chat with Lemonade, connect to agents, or build it into your own app. The choice is yours!
+      </p>
+      <div class="hp-persona-switch ice-card" role="group" aria-label="Choose a quickstart path">
+        <button class="hp-persona-switch-btn" type="button" data-cta-switch="people" data-persona-choice="people">
+          <span class="material-symbols-outlined">person</span>
+          <span>Run Lemonade</span>
+        </button>
+        <button class="hp-persona-switch-btn" type="button" data-cta-switch="developers" data-persona-choice="developers">
+          <span class="material-symbols-outlined">deployed_code</span>
+          <span>Embed the SDK</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== QUICK START: INSTALL (User persona) ==================== -->
+    <section class="hp-section hp-reveal" id="getting-started" data-cta-persona="people">
+      <div class="hp-quickstart-card ice-card">
+        <h2 class="hp-section-heading">Up and running in minutes.</h2>
+        <p class="hp-section-desc hp-quickstart-subtitle">Installation equips your computer with an AI runtime, GUI, CLI, and API endpoints for your AI journey.</p>
+        <div class="gs-platforms" id="gsPlatforms">
+          <button class="gs-platform" type="button" data-platform="windows">
+            <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/platforms/windows.png" alt="Windows" />
+            <span class="gs-platform-name">Windows</span>
+          </button>
+          <button class="gs-platform" type="button" data-platform="docker">
+            <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/platforms/docker.png" alt="Docker" />
+            <span class="gs-platform-name">Docker</span>
+          </button>
+          <button class="gs-platform" type="button" data-platform="snap">
+            <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/platforms/snapcraft.png" alt="Snap" />
+            <span class="gs-platform-name">Snap</span>
+          </button>
+          <button class="gs-platform" type="button" data-platform="ubuntu">
+            <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/platforms/ubuntu.png" alt="Ubuntu" />
+            <span class="gs-platform-name">Ubuntu</span>
+          </button>
+          <button class="gs-platform" type="button" data-platform="arch">
+            <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/platforms/arch_linux.png" alt="Arch" />
+            <span class="gs-platform-name">Arch</span>
+          </button>
+          <button class="gs-platform" type="button" data-platform="fedora">
+            <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/platforms/fedora.png" alt="Fedora" />
+            <span class="gs-platform-name">Fedora</span>
+          </button>
+          <button class="gs-platform" type="button" data-platform="debian">
+            <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/platforms/debian.png" alt="Debian" />
+            <span class="gs-platform-name">Debian</span>
+          </button>
+          <button class="gs-platform" type="button" data-platform="apple">
+            <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/platforms/apple.png" alt="macOS" />
+            <span class="gs-platform-name">macOS</span>
+          </button>
+        </div>
+
+        <div class="gs-install" id="gsInstall"></div>
+      </div>
+    </section>
+
+    <!-- ==================== QUICK START: BUILD (Developer persona) ==================== -->
+    <section class="hp-section hp-reveal" id="dev-quickstart" data-cta-persona="developers">
+      <div class="hp-dev-quickstart-layout hp-dev-quickstart-card ice-card">
+        <div class="hp-dev-quickstart-copy">
+          <h2 class="hp-section-heading">Quick Start</h2>
+          <p class="hp-section-desc">Learn how to add native support or an embedded copy of Lemonade in your app.</p>
+          <div class="hp-cta-actions">
+            <a class="hp-cta-btn is-primary" href="https://lemonade-server.ai/docs/embeddable/" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined">deployed_code</span> Embeddable SDK
             </a>
-            <a class="dev-btn" href="#" onclick="showInstaller(); return false;">
-              Developer Setup<br>
-              <span class="dev-sub">Linux, Windows, macOS</span>
+            <a class="hp-cta-btn" href="https://lemonade-server.ai/docs/api/" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined">api</span> API Reference
+            </a>
+            <a class="hp-cta-btn" href="https://github.com/lemonade-sdk/lemonade" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined">code</span> Source on GitHub
             </a>
           </div>
         </div>
-      </div>
-      <div class="hp-hero-right">
-        <div class="hp-demo-panel">
-          <div class="hp-demo-item active" data-mode="0">
-            <div class="hp-demo-label">Chat</div>
-            <div class="hp-demo-chat">
-              <div class="hp-chat-user">What can I do with 128 GB of unified RAM?</div>
-              <div class="hp-chat-ai">Load up models like gpt-oss-120b or Qwen-Coder-Next for advanced tool use.</div>
-              <div class="hp-chat-user">What should I tune first?</div>
-              <div class="hp-chat-ai">You can use --no-mmap to speed up load times and increase context size to 64 or more.</div>
-            </div>
-          </div>
-          <div class="hp-demo-item" data-mode="1">
-            <div class="hp-demo-label">Image Generation</div>
-            <div class="hp-demo-image">
-              <div class="hp-chat-user hp-demo-prompt">A pitcher of lemonade in the style of a renaissance painting</div>
-              <div class="hp-demo-image-placeholder"></div>
-            </div>
-          </div>
-          <div class="hp-demo-item" data-mode="2">
-            <div class="hp-demo-label">Speech</div>
-            <div class="hp-demo-audio">
-              <div class="hp-chat-user hp-demo-prompt">Hello, I am your AI assistant. What can I do for you today?</div>
-              <div class="hp-waveform">
-                <span></span><span></span><span></span><span></span><span></span>
-                <span></span><span></span><span></span><span></span><span></span>
-                <span></span><span></span><span></span><span></span><span></span>
-                <span></span><span></span><span></span><span></span><span></span>
-                <span></span><span></span><span></span><span></span><span></span>
-              </div>
-            </div>
+        <div class="hp-proof-band hp-dev-proof-panel" aria-label="Lemonade platform highlights">
+          <div class="hp-proof-grid">
+            <article class="hp-proof-card ice-card">
+              <span class="material-symbols-outlined hp-proof-icon">diversity_3</span>
+              <h3>Truly open</h3>
+              <p>Free to use, shaped in public, and built with a community that welcomes builders.</p>
+            </article>
+            <article class="hp-proof-card ice-card">
+              <span class="material-symbols-outlined hp-proof-icon">shield_lock</span>
+              <h3>Fully private</h3>
+              <p>Transparent, zero telemetry. Data stays where you put it. No upsell.</p>
+            </article>
+            <article class="hp-proof-card ice-card">
+              <span class="material-symbols-outlined hp-proof-icon">auto_awesome</span>
+              <h3>Omni modal</h3>
+              <p>Your app gets chat, vision, image, speech, transcription, and embeddings.</p>
+            </article>
+            <article class="hp-proof-card ice-card">
+              <span class="material-symbols-outlined hp-proof-icon">tune</span>
+              <h3>Scalable platform</h3>
+              <p>Local-first on all major platforms. Routes to servers and cloud APIs on-demand.</p>
+            </article>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ==================== OPEN SOURCE ==================== -->
-    <section class="hp-section hp-reveal hp-open-section">
-      <span class="hp-section-label">Open Source</span>
-      <h2 class="hp-section-heading">Built by the local AI community for every PC.</h2>
-      <p class="hp-section-desc">Lemonade exists because local AI should be free, open, fast, and private.</p>
+    <!-- ==================== PERSONA JOURNEY (zone heading + pinned TOC stage) ==================== -->
+    <header class="hp-zone-head hp-reveal">
+      <h2 class="hp-zone-heading" id="personaZoneHeading"></h2>
+      <p class="hp-section-desc" id="personaZoneSubtitle"></p>
+    </header>
+    <div class="hp-journey hp-reveal" id="personaJourney"></div>
 
-      <div class="hp-open-layout">
-        <div class="hp-open-story">
-          <h3>Join the community</h3>
-          <div class="hp-community-cta">
-            <a class="hp-community-btn hp-community-btn-github" href="https://github.com/lemonade-sdk/lemonade" target="_blank" rel="noopener">
-              <span class="hp-community-btn-icon-col" aria-hidden="true">
-                <span class="hp-community-btn-icon">
-                  <img src="https://cdn.simpleicons.org/github/ffffff" alt="" />
-                </span>
-              </span>
-              <span class="hp-community-btn-text">
-                <span class="hp-community-btn-label">GitHub</span>
-                <span class="hp-community-btn-sub" id="githubStarsCount">2.1k stars</span>
-              </span>
-            </a>
-            <a class="hp-community-btn hp-community-btn-discord" href="https://discord.gg/5xXzkMu8Zk" target="_blank" rel="noopener">
-              <span class="hp-community-btn-icon-col" aria-hidden="true">
-                <span class="hp-community-btn-icon">
-                  <img src="https://cdn.simpleicons.org/discord/ffffff" alt="" />
-                </span>
-              </span>
-              <span class="hp-community-btn-text">
-                <span class="hp-community-btn-label">Discord</span>
-                <span class="hp-community-btn-sub" id="discordOnlineCount">117 online now</span>
-              </span>
-            </a>
+    <!-- ==================== COMMUNITY ("Built in the open") ==================== -->
+    <section class="hp-section hp-community hp-reveal" aria-labelledby="communityHeading">
+      <div class="hp-community-card ice-card">
+        <div class="hp-community-layout">
+          <!-- LEFT: the message + the ask (hierarchy anchor) -->
+          <div class="hp-community-copy">
+            <span class="hp-community-eyebrow">Community</span>
+            <h2 class="hp-section-heading" id="communityHeading">Built in the open, with&nbsp;you.</h2>
+            <p class="hp-section-desc">Industry veterans, AI enthusiasts, and an ever-growing crew of innovators and builders, shaping the future of local AI together.</p>
+            <div class="hp-cta-row hp-community-cta-row">
+              <a class="download-btn" href="https://discord.gg/5xXzkMu8Zk" target="_blank" rel="noopener">
+                <svg class="hp-cta-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.54 5.33A16.9 16.9 0 0 0 15.33 4l-.2.38c1.46.36 2.14.88 2.14.88a14.5 14.5 0 0 0-6.77-.26 12.3 12.3 0 0 0-3.77.26s.7-.55 2.25-.9L8.84 4a17 17 0 0 0-4.22 1.33C1.95 9.3 1.22 13.17 1.58 17c1.78 1.3 3.5 2.1 5.2 2.62l.63-.85a6.8 6.8 0 0 1-1.64-.78l.4-.3c3.16 1.48 6.6 1.48 9.72 0l.4.3c-.52.32-1.06.58-1.64.78l.63.85c1.7-.52 3.43-1.31 5.2-2.62.43-4.43-.72-8.26-2.94-11.67ZM8.52 14.64c-.95 0-1.73-.88-1.73-1.96s.76-1.96 1.73-1.96c.96 0 1.75.88 1.73 1.96 0 1.08-.77 1.96-1.73 1.96Zm6.96 0c-.95 0-1.73-.88-1.73-1.96s.76-1.96 1.73-1.96c.96 0 1.74.88 1.73 1.96 0 1.08-.77 1.96-1.73 1.96Z"></path></svg> Join Discord
+                <span class="hp-cta-stat" data-community-stat="discord">Members</span>
+              </a>
+              <a class="dev-btn ice-card" href="https://github.com/lemonade-sdk/lemonade" target="_blank" rel="noopener">
+                <svg class="hp-cta-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.79 23.38c.6.11.82-.26.82-.58v-2.17c-3.34.73-4.04-1.42-4.04-1.42-.55-1.4-1.34-1.77-1.34-1.77-1.1-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.08 1.85 2.83 1.32 3.52 1 .11-.78.42-1.32.76-1.62-2.66-.3-5.46-1.33-5.46-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.02 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.63-5.47 5.93.43.37.81 1.1.81 2.22v3.3c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z"></path></svg> GitHub
+                <span class="hp-cta-stat" data-community-stat="github">Stars</span>
+              </a>
+            </div>
+            <div class="hp-community-links">
+              <a href="https://lemonade-server.ai/docs/dev/philosophy/" target="_blank" rel="noopener">Our philosophy <span aria-hidden="true">&rarr;</span></a>
+              <a href="https://lemonade-server.ai/docs/dev/contribute/" target="_blank" rel="noopener">Contribution guide <span aria-hidden="true">&rarr;</span></a>
+            </div>
+          </div>
+
+          <!-- RIGHT: the proof — the roadmap is steered by open working groups -->
+          <div class="hp-community-groups">
+            <h3 class="hp-community-groups-head"><span class="material-symbols-outlined">hub</span> The roadmap is steered by open working groups</h3>
+            <div class="hp-wg-grid" id="hpWorkingGroups" aria-busy="true"></div>
           </div>
         </div>
+      </div>
 
-        <div class="hp-open-stack">
-          <h3>Built on the best inference engines</h3>
-          <div class="hp-logo-grid">
-            <a href="https://github.com/ggml-org/llama.cpp" title="llama.cpp" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://user-images.githubusercontent.com/1991296/230134379-7181e485-c521-4d23-a0d6-f7b3b61ba524.png" alt="llama.cpp" /></span>
-            </a>
-            <a href="https://github.com/microsoft/onnxruntime" title="ONNX Runtime" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://raw.githubusercontent.com/microsoft/onnxruntime/main/docs/images/ONNX_Runtime_logo.png" alt="ONNX Runtime" /></span>
-            </a>
-            <a href="https://github.com/FastFlowLM/FastFlowLM" title="FastFlowLM" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://raw.githubusercontent.com/FastFlowLM/FastFlowLM/main/assets/logo_next_to_flm.png" alt="FastFlowLM" /></span>
-            </a>
-            <a href="https://github.com/amd/RyzenAI-SW" title="Ryzen AI SW" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://www.phoronix.net/image.php?id=2025&image=ryzen_ai_sw_1" alt="Ryzen AI SW" /></span>
-            </a>
-            <a href="https://rocm.docs.amd.com/" title="ROCm" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://upload.wikimedia.org/wikipedia/commons/0/06/20467978-A_AMD_ROCm_Lockup_85tall.png" alt="ROCm" /></span>
-            </a>
-            <a href="https://huggingface.co/" title="Hugging Face" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://huggingface.co/datasets/huggingface/brand-assets/resolve/main/hf-logo.png" alt="Hugging Face" /></span>
-            </a>
-            <a href="https://www.vulkan.org/" title="Vulkan" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Vulkan_API_logo.svg/330px-Vulkan_API_logo.svg.png" alt="Vulkan" /></span>
-            </a>
-            <a href="https://github.com/ggml-org/whisper.cpp" title="whisper.cpp" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://user-images.githubusercontent.com/1991296/235238348-05d0f6a4-da44-4900-a1de-d0707e75b763.jpeg" alt="whisper.cpp" /></span>
-            </a>
-            <a href="https://github.com/leejet/stable-diffusion.cpp" title="stable-diffusion.cpp" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://raw.githubusercontent.com/leejet/stable-diffusion.cpp/master/assets/logo.png" alt="stable-diffusion.cpp" /></span>
-            </a>
-            <a href="https://github.com/lucasjinreal/Kokoros" title="Kokoros" target="_blank" rel="noopener" class="hp-logo-chip">
-              <span class="hp-logo-lockup"><img src="https://camo.githubusercontent.com/8b7b5be44f4ee1542bbcf55b2ab7e5e51f5e020f6b497bfab3e596a3b4715b75/68747470733a2f2f696d67323032332e636e626c6f67732e636f6d2f626c6f672f333537323332332f3230323530312f333537323332332d32303235303131323138343130303337382d3930373938383637302e6a7067" alt="Kokoros" /></span>
-            </a>
-          </div>
+      <!-- Engine ticker — a slim "open ecosystem" strip that grounds the section -->
+      <div class="hp-community-ticker-strip">
+        <span class="hp-community-trust-caption">Built alongside the open-source engines that power local AI</span>
+        <div class="hp-logo-ticker" id="hpLogoTicker">
+          <div class="hp-logo-ticker-track" id="hpLogoTickerTrack"></div>
         </div>
       </div>
     </section>
 
     <!-- ==================== MARKETPLACE ==================== -->
     <section class="hp-section hp-reveal">
-      <span class="hp-section-label">Ecosystem</span>
       <h2 class="hp-section-heading">Works with great apps.</h2>
       <p class="hp-section-desc">Lemonade is integrated in many apps and works out-of-box with hundreds more thanks to the OpenAI API standard.</p>
 
-      <div class="hp-eco-apps">
-        <a href="https://lemonade-server.ai/docs/server/apps/open-webui/" title="Open WebUI" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/refs/heads/main/partner_logos/openwebui.jpg" alt="Open WebUI" />
-          <span class="hp-eco-app-name">Open WebUI</span>
-        </a>
-        <a href="https://n8n.io/integrations/lemonade-model/" title="n8n" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/n8n.png" alt="n8n" />
-          <span class="hp-eco-app-name">n8n</span>
-        </a>
-        <a href="https://github.com/amd/gaia" title="Gaia" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/gaia.png" alt="Gaia" />
-          <span class="hp-eco-app-name">Gaia</span>
-        </a>
-        <a href="https://github.com/lemonade-sdk/infinity-arcade" title="Infinity Arcade" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/infinity_arcade.png" alt="Infinity Arcade" />
-          <span class="hp-eco-app-name">Infinity Arcade</span>
-        </a>
-        <a href="https://lemonade-server.ai/docs/server/apps/continue/" title="Continue" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/continue.png" alt="Continue" />
-          <span class="hp-eco-app-name">Continue</span>
-        </a>
-        <a href="https://marketplace.visualstudio.com/items?itemName=lemonade-sdk.lemonade-sdk" title="GitHub Copilot" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/github_copilot.png" alt="GitHub Copilot" />
-          <span class="hp-eco-app-name">GitHub Copilot</span>
-        </a>
-        <a href="https://openhands.dev/" title="OpenHands" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/openhands.png" alt="OpenHands" />
-          <span class="hp-eco-app-name">OpenHands</span>
-        </a>
-        <a href="https://marketplace.dify.ai/plugins/langgenius/lemonade" title="Dify" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/dify.png" alt="Dify" />
-          <span class="hp-eco-app-name">Dify</span>
-        </a>
-        <a href="https://deeptutor.knowhiz.us/" title="Deep Tutor" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/deep_tutor.png" alt="Deep Tutor" />
-          <span class="hp-eco-app-name">Deep Tutor</span>
-        </a>
-        <a href="https://www.iterate.ai/" title="Iterate.ai" target="_blank" class="hp-eco-app">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/app/marketplace/iterate_ai.png" alt="Iterate.ai" />
-          <span class="hp-eco-app-name">Iterate.ai</span>
-        </a>
-      </div>
+      <div class="hp-eco-apps" id="hpEcoApps"></div>
       <div class="hp-eco-cta">
-        <a href="marketplace.html" class="marketplace-cta-btn">Explore the Marketplace</a>
-      </div>
-    </section>
-
-    <!-- ==================== TECH SPECS ==================== -->
-    <section class="hp-section hp-reveal">
-      <span class="hp-section-label">Tech Specs</span>
-      <h2 class="hp-section-heading">Built for practical local AI workflows.</h2>
-      <p class="hp-section-desc">Everything from install to runtime is optimized for fast setup, broad compatibility, and local-first execution.</p>
-      <div class="hp-tech-grid">
-        <div class="hp-tech-card">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/LemonadeIcons/8_cpp.png" alt="Native C++ Icon" class="hp-tech-icon" />
-          <h3>Native C++ Backend</h3>
-          <p>Lightweight service that is only 2MB.</p>
-        </div>
-        <div class="hp-tech-card">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/LemonadeIcons/1_install.png" alt="Install Icon" class="hp-tech-icon" />
-          <h3>One Minute Install</h3>
-          <p>Simple installer that sets up the stack automatically.</p>
-        </div>
-        <div class="hp-tech-card">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/refs/heads/main/partner_logos/OpenAI-black-monoblossom.png" alt="OpenAI Icon" class="hp-tech-icon" />
-          <h3>OpenAI API Compatible</h3>
-          <p>Works with hundreds of apps out-of-box and integrates in minutes.</p>
-        </div>
-        <div class="hp-tech-card">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/LemonadeIcons/3_configuresHW.png" alt="Auto-config Icon" class="hp-tech-icon" />
-          <h3>Auto-configures for your hardware</h3>
-          <p>Configures dependencies for your GPU and NPU.</p>
-        </div>
-        <div class="hp-tech-card">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/LemonadeIcons/2_multiengine.png" alt="Multi-engine Icon" class="hp-tech-icon" />
-          <h3>Multi-engine compatibility</h3>
-          <p>Works with llama.cpp, Ryzen AI SW, FastFlowLM, and more.</p>
-        </div>
-        <div class="hp-tech-card">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/LemonadeIcons/4_multimodel.png" alt="Multiple Models Icon" class="hp-tech-icon" />
-          <h3>Multiple Models at Once</h3>
-          <p>Run more than one model at the same time.</p>
-        </div>
-        <div class="hp-tech-card">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/LemonadeIcons/5_crossplatform.png" alt="Cross-platform Icon" class="hp-tech-icon" />
-          <h3>Cross-platform</h3>
-          <p>A consistent experience across Windows, Linux, and macOS (beta).</p>
-        </div>
-        <div class="hp-tech-card">
-          <img src="https://raw.githubusercontent.com/lemonade-sdk/assets/main/LemonadeIcons/7_app.png" alt="Built-in app Icon" class="hp-tech-icon" />
-          <h3>Built-in app</h3>
-          <p>A GUI that lets you download, try, and switch models quickly.</p>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ==================== UNIFIED API ==================== -->
-    <section class="hp-section hp-reveal">
-      <span class="hp-section-label">Unified API</span>
-      <h2 class="hp-section-heading">One local service for every modality.</h2>
-      <p class="hp-section-desc">Point your app at Lemonade and get chat, vision, image gen, transcription, speech gen, and more with standard APIs.</p>
-
-      <div class="hp-api-layout">
-        <div class="hp-api-modalities">
-          <button class="hp-api-modality is-active" type="button" data-api-sample="chat">
-            <h3>Chat</h3>
-          </button>
-          <button class="hp-api-modality" type="button" data-api-sample="vision">
-            <h3>Vision</h3>
-          </button>
-          <button class="hp-api-modality" type="button" data-api-sample="image">
-            <h3>Image Gen</h3>
-          </button>
-          <button class="hp-api-modality" type="button" data-api-sample="stt">
-            <h3>Transcription</h3>
-          </button>
-          <button class="hp-api-modality" type="button" data-api-sample="tts">
-            <h3>Speech Gen</h3>
-          </button>
-        </div>
-
-        <div class="hp-api-sample-panel">
-          <div class="hp-api-sample-head">
-            <div class="hp-api-method hp-api-sample-method"><span class="hp-method-badge">POST</span> <span id="hpApiSampleEndpoint">/api/v1/chat/completions</span></div>
-            <button id="hpApiCopyBtn" class="hp-api-copy-btn" type="button" aria-label="Copy code sample" title="Copy code sample">
-              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                <path d="M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V9Zm-6 4V5a2 2 0 0 1 2-2h8v2H5v8H3Z"></path>
-              </svg>
-            </button>
-          </div>
-          <pre><code id="hpApiSampleCode"></code></pre>
-        </div>
-      </div>
-      <div class="hp-api-cta">
-        <a href="https://lemonade-server.ai/docs/server/server_spec/" class="marketplace-cta-btn" target="_blank" rel="noopener">View the Server Spec</a>
+        <a href="marketplace.html" class="marketplace-cta-btn hp-section-cta"><span class="material-symbols-outlined">open_in_new</span> Explore the Marketplace</a>
       </div>
     </section>
 
     <!-- ==================== RELEASE NOTES ==================== -->
     <section class="hp-section hp-reveal hp-release-section">
-      <span class="hp-section-label">Latest Release</span>
-      <h2 class="hp-section-heading">Always improving.</h2>
-      <p class="hp-section-desc">Track the newest improvements and highlights from the Lemonade release  stream.</p>
+      <h2 class="hp-section-heading">Always innovating.</h2>
+      <p class="hp-section-desc">We ship a new release every week. Track the latest highlights below and read our <a href="https://lemonade-server.ai/docs/dev/release/" target="_blank" rel="noopener">release process</a>.</p>
       <div class="hp-section-release">
         <div class="hp-release-carousel">
           <button class="hp-release-nav hp-release-nav-prev" id="releasePrevBtn" type="button" aria-label="Show previous release" title="Show previous release">
             <span aria-hidden="true">&#8249;</span>
           </button>
-          <div class="release-announcement" id="releaseAnnouncement">
+          <div class="release-announcement ice-card" id="releaseAnnouncement">
             <div class="release-content">
               <div class="release-info">
                 <p class="release-name" id="releaseName">Loading releases...</p>
@@ -312,7 +222,7 @@
                 <div class="release-highlights" id="releaseHighlights"></div>
               </div>
             </div>
-            <a class="release-link" href="#" id="releaseLink" target="_blank" rel="noopener">View Release</a>
+            <a class="release-link hp-section-cta" href="#" id="releaseLink" target="_blank" rel="noopener"><span class="material-symbols-outlined">open_in_new</span> View Release</a>
           </div>
           <button class="hp-release-nav hp-release-nav-next" id="releaseNextBtn" type="button" aria-label="Show newer release" title="Show newer release">
             <span aria-hidden="true">&#8250;</span>
@@ -331,147 +241,274 @@
 
   <div class="footer-placeholder"></div>
 
-  <script src="assets/navbar.js"></script>
-  <script src="assets/install-selector.js"></script>
+  <script src="assets/navbar.js?v=hero-redesign"></script>
   <script src="assets/footer.js"></script>
+  <script src="assets/marketplace.js"></script>
   <script src="assets/news-data.js"></script>
+  <script src="assets/flowchart.js"></script>
+  <!-- Persona-demo: framework first (creates window.LemonadePersona), then the
+       shared primitives, then each persona's sections self-register. -->
+  <script src="assets/persona-demo/framework.js"></script>
+  <script src="assets/persona-demo/common.js"></script>
+  <script src="assets/persona-demo/people/_persona.js"></script>
+  <script src="assets/persona-demo/people/explore.js"></script>
+  <script src="assets/persona-demo/people/apps.js"></script>
+  <script src="assets/persona-demo/people/backends.js"></script>
+  <script src="assets/persona-demo/people/cli.js"></script>
+  <script src="assets/persona-demo/people/selfhost.js"></script>
+  <script src="assets/persona-demo/developers/_persona.js"></script>
+  <script src="assets/persona-demo/developers/runtime.js"></script>
+  <script src="assets/persona-demo/developers/routing.js"></script>
+  <script src="assets/persona-demo/developers/interfaces.js"></script>
   <script>
-    // ---- Carousel + Demo panel sync ----
+
+    // ---- Getting Started section ----
     (function() {
-      var track = document.getElementById('hpCarouselTrack');
-      var currentEl = document.getElementById('hpCarouselCurrent');
-      var nextEl = document.getElementById('hpCarouselNext');
-      if (!track || !currentEl || !nextEl) return;
+      var gsPlatform = 'windows';
+      var gsCopySvg = '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V9Zm-6 4V5a2 2 0 0 1 2-2h8v2H5v8H3Z"></path></svg>';
 
-      var demos = document.querySelectorAll('.hp-demo-item');
-      var labels = ['LLMs', 'images', 'speech'];
-      var current = 0;
-      var total = Math.min(demos.length, labels.length);
-      if (total <= 0) return;
-
-      var intervalMs = 3000;
-      var durationMs = 420;
-      var easing = 'cubic-bezier(0.4,0,0.2,1)';
-      var intervalId = null;
-      var isAnimating = false;
-      var activeDemoIndex = 0;
-      var demoExitTimer = null;
-      var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      function setDemo(index) {
-        if (index === activeDemoIndex) return;
-        var previous = demos[activeDemoIndex];
-        var next = demos[index];
-        if (!next) return;
-        if (previous) {
-          previous.classList.remove('active');
-          previous.classList.add('exiting-up');
-        }
-        next.classList.remove('exiting-up');
-        next.classList.add('active');
-        activeDemoIndex = index;
-        if (demoExitTimer) clearTimeout(demoExitTimer);
-        demoExitTimer = window.setTimeout(function() {
-          demos.forEach(function(d, i) {
-            if (i !== activeDemoIndex) d.classList.remove('exiting-up');
-          });
-          demoExitTimer = null;
-        }, durationMs + 30);
+      function gsDetectPlatform() {
+        var ua = navigator.userAgent || '';
+        if (/Win/.test(ua)) return 'windows';
+        if (/Mac/.test(ua)) return 'apple';
+        if (/Linux/.test(ua)) return 'ubuntu';
+        return 'windows';
       }
 
-      function parkSlots() {
-        currentEl.style.transition = 'none';
-        nextEl.style.transition = 'none';
-        currentEl.style.transform = 'translate3d(0, 0, 0)';
-        nextEl.style.transform = 'translate3d(0, 100%, 0)';
+      function gsVersion() {
+        return window.lmnLatestVersion || '';
       }
 
-      function advance() {
-        if (isAnimating) return;
-        var nextIndex = (current + 1) % total;
+      function gsConsoleHtml(commands) {
+        var id = 'gs-cmd-' + Math.random().toString(36).substr(2, 6);
+        var lines = commands.map(function(c) {
+          return c.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }).join('\n');
+        return '<div class="gs-console ice-card">' +
+          '<pre><code id="' + id + '">' + lines + '</code></pre>' +
+          '<button class="gs-copy-btn" type="button" aria-label="Copy" data-copy-target="' + id + '">' + gsCopySvg + '</button>' +
+        '</div>';
+      }
 
-        if (prefersReducedMotion) {
-          currentEl.textContent = labels[nextIndex];
-          current = nextIndex;
-          setDemo(current);
-          return;
+      function gsCopyHandler(e) {
+        var btn = e.target.closest('.gs-copy-btn');
+        if (!btn) return;
+        var targetId = btn.getAttribute('data-copy-target');
+        var codeEl = document.getElementById(targetId);
+        if (!codeEl) return;
+        var text = codeEl.textContent || '';
+        try { navigator.clipboard.writeText(text); } catch (err) {}
+        btn.classList.add('is-copied');
+        btn.setAttribute('aria-label', 'Copied');
+        setTimeout(function() {
+          btn.classList.remove('is-copied');
+          btn.setAttribute('aria-label', 'Copy');
+        }, 1200);
+      }
+
+      function gsRenderInstall() {
+        var el = document.getElementById('gsInstall');
+        if (!el) return;
+        var v = gsVersion();
+        var html = '';
+        switch (gsPlatform) {
+          case 'windows':
+            html = '<a class="gs-download-link" href="https://github.com/lemonade-sdk/lemonade/releases/latest/download/lemonade.msi">' +
+              '<span class="material-symbols-outlined">desktop_windows</span> Download for Windows (.msi)</a>';
+            break;
+          case 'apple':
+            html = v
+              ? '<a class="gs-download-link" href="https://github.com/lemonade-sdk/lemonade/releases/latest/download/Lemonade-' + v + '-Darwin.pkg">' +
+                '<span class="material-symbols-outlined">laptop_mac</span> Download for macOS (.pkg)</a>'
+              : '<a class="gs-download-link" href="https://github.com/lemonade-sdk/lemonade/releases/latest">' +
+                '<span class="material-symbols-outlined">laptop_mac</span> Download for macOS (.pkg)</a>';
+            break;
+          case 'docker':
+            html = gsConsoleHtml([
+              'docker run -d \\',
+              '  --name lemonade-server \\',
+              '  -p 13305:13305 \\',
+              '  -v lemonade-cache:/root/.cache/huggingface \\',
+              '  -v lemonade-llama:/opt/lemonade/llama \\',
+              '  ghcr.io/lemonade-sdk/lemonade-server:latest'
+            ]);
+            break;
+          case 'snap':
+            html = gsConsoleHtml(['sudo snap install lemonade']);
+            break;
+          case 'ubuntu':
+            html = gsConsoleHtml([
+              'sudo add-apt-repository ppa:lemonade-team/stable',
+              'sudo apt install lemonade-server'
+            ]);
+            break;
+          case 'arch':
+            html = gsConsoleHtml(['pacman -S lemonade-server']);
+            break;
+          case 'fedora':
+            if (v) {
+              var rpm43 = 'lemonade-server-' + v + '-fc43.x86_64.rpm';
+              var rpm44 = 'lemonade-server-' + v + '-fc44.x86_64.rpm';
+              html = '<div class="gs-fedora-cols">' +
+                '<div class="gs-fedora-col">' +
+                  '<p class="gs-fedora-label">Fedora 43</p>' +
+                  gsConsoleHtml([
+                    'wget https://github.com/lemonade-sdk/lemonade/releases/latest/download/' + rpm43,
+                    'sudo dnf install ./' + rpm43
+                  ]) +
+                '</div>' +
+                '<div class="gs-fedora-col">' +
+                  '<p class="gs-fedora-label">Fedora 44</p>' +
+                  gsConsoleHtml([
+                    'wget https://github.com/lemonade-sdk/lemonade/releases/latest/download/' + rpm44,
+                    'sudo dnf install ./' + rpm44
+                  ]) +
+                '</div>' +
+              '</div>' +
+              '<div class="gs-install-block">' +
+                gsConsoleHtml([
+                  'sudo systemctl enable --now lemond',
+                  'sudo systemctl --no-pager status lemond'
+                ]) +
+              '</div>';
+            } else {
+              html = '<a class="gs-download-link" href="https://github.com/lemonade-sdk/lemonade/releases/latest">' +
+                '<span class="material-symbols-outlined">open_in_new</span> View latest release</a>';
+            }
+            break;
+          case 'debian':
+            if (v) {
+              var deb = 'lemonade-server_' + v + '-debian13_amd64.deb';
+              html = gsConsoleHtml([
+                'wget https://github.com/lemonade-sdk/lemonade/releases/latest/download/' + deb,
+                'sudo apt install ./' + deb
+              ]) +
+              '<div class="gs-install-block">' +
+                gsConsoleHtml([
+                  'sudo systemctl enable --now lemond',
+                  'sudo systemctl --no-pager status lemond'
+                ]) +
+              '</div>';
+            } else {
+              html = '<a class="gs-download-link" href="https://github.com/lemonade-sdk/lemonade/releases/latest">' +
+                '<span class="material-symbols-outlined">open_in_new</span> View latest release</a>';
+            }
+            break;
         }
+        el.innerHTML = html;
+      }
 
-        isAnimating = true;
-        nextEl.textContent = labels[nextIndex];
-        parkSlots();
-        currentEl.offsetHeight;
+      function gsSetPlatform(name) {
+        gsPlatform = name;
+        var btns = document.querySelectorAll('.gs-platform');
+        btns.forEach(function(btn) {
+          btn.classList.toggle('is-active', btn.getAttribute('data-platform') === name);
+        });
+        gsRenderInstall();
+      }
 
-        var transition = 'transform ' + durationMs + 'ms ' + easing;
-        currentEl.style.transition = transition;
-        nextEl.style.transition = transition;
-        setDemo(nextIndex);
+      function gsInit() {
+        var container = document.getElementById('gsPlatforms');
+        if (!container) return;
 
-        window.requestAnimationFrame(function() {
-          currentEl.style.transform = 'translate3d(0, -100%, 0)';
-          nextEl.style.transform = 'translate3d(0, 0, 0)';
+        // Click handlers
+        container.addEventListener('click', function(e) {
+          var btn = e.target.closest('.gs-platform');
+          if (!btn) return;
+          gsSetPlatform(btn.getAttribute('data-platform'));
         });
 
-        var done = function(event) {
-          if (event.propertyName !== 'transform') return;
-          nextEl.removeEventListener('transitionend', done);
+        // Copy handlers (delegated)
+        var section = document.getElementById('getting-started');
+        if (section) section.addEventListener('click', gsCopyHandler);
 
-          var oldCurrent = currentEl;
-          currentEl = nextEl;
-          nextEl = oldCurrent;
-          current = nextIndex;
+        // Auto-detect and render
+        gsSetPlatform(gsDetectPlatform());
 
-          parkSlots();
-          isAnimating = false;
-        };
-        nextEl.addEventListener('transitionend', done);
-      }
-
-      function handleVisibility() {
-        if (document.hidden) {
-          if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
+        // Re-render when version becomes available
+        window.addEventListener('lmnLatestVersionReady', function() {
+          gsRenderInstall();
+        });
+        var versionCheck = setInterval(function() {
+          if (window.lmnLatestVersion) {
+            clearInterval(versionCheck);
+            gsRenderInstall();
           }
-          return;
-        }
-        if (!intervalId) {
-          intervalId = setInterval(advance, intervalMs);
-        }
+        }, 500);
+        // Stop checking after 15s
+        setTimeout(function() { clearInterval(versionCheck); }, 15000);
       }
 
-      currentEl.textContent = labels[0];
-      nextEl.textContent = labels[1 % total];
-      demos.forEach(function(d, i) {
-        d.classList.remove('active', 'exiting-up');
-        if (i === 0) d.classList.add('active');
-      });
-      activeDemoIndex = 0;
-      setDemo(0);
-      parkSlots();
-      intervalId = setInterval(advance, intervalMs);
-      document.addEventListener('visibilitychange', handleVisibility);
-      window.addEventListener('beforeunload', function() {
-        if (demoExitTimer) clearTimeout(demoExitTimer);
-        if (intervalId) clearInterval(intervalId);
-      });
+      // Expose for DOMContentLoaded
+      window.gsInit = gsInit;
     })();
 
-    // ---- Scroll reveal ----
+    // ---- Section reveal (lift-in) + persona replay ----
+    // The page-load fade is a CSS keyframe animation: `.main > * { animation: fadeInUp }`
+    // (website-styles.css). It fades every section in on load and, via `both` fill, holds
+    // it visible afterward — which is also why it shadows the .hp-reveal/.hp-visible system
+    // below for these elements. On a persona switch we replay that SAME animation on every
+    // .main child below the toggle, so the journey and everything under it fade in again
+    // exactly like a fresh load. (The active quickstart already replays on its own, because
+    // switching personas flips its display:none/block, which restarts the animation.)
     (function() {
-      var sections = document.querySelectorAll('.hp-reveal');
+      // Legacy scroll-reveal hook. For .main children it is shadowed by the fadeInUp fill
+      // above; kept as a harmless no-JS-animation fallback for any .hp-reveal that is not a
+      // direct .main child.
       var observer = new IntersectionObserver(function(entries) {
         entries.forEach(function(entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('hp-visible');
-          }
+          if (entry.isIntersecting) entry.target.classList.add('hp-visible');
         });
       }, { threshold: 0.12 });
-      sections.forEach(function(s) { observer.observe(s); });
+      document.querySelectorAll('.hp-reveal').forEach(function(s) { observer.observe(s); });
+
+      // The fadeInUp animation lives on `.main > *`, so replay targets the .main children
+      // that follow the toggle in the document (the promise and the toggle itself precede
+      // it and stay put).
+      var toggle = document.getElementById('hero-cta');
+      var belowToggle = Array.prototype.filter.call(
+        document.querySelectorAll('.main > *'),
+        function(el) { return toggle && (toggle.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING); }
+      );
+
+      // Restart the entrance animation: clear it, force a reflow so the browser drops the
+      // finished run, then let the stylesheet rule re-apply — it plays again from the top.
+      function replay(el) {
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = '';
+      }
+
+      // lemonadePersonaChange is emitted ONLY on a real user persona switch
+      // (persona-demo/framework.js), never on load — so every fire is a switch.
+      // When the switch is wrapped in a View Transition (supported browser + motion
+      // allowed), that crossfade already animates the new content into place from its
+      // settled state — replaying fadeInUp here would double-animate it (and get
+      // captured mid-fade at opacity:0). So skip the replay on the crossfade path and
+      // keep it only for the instant-swap fallback, matching framework.js's condition.
+      window.addEventListener('lemonadePersonaChange', function() {
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (document.startViewTransition && !reduce) return; // crossfade handles the change
+        belowToggle.forEach(replay);
+      });
     })();
 
     // ---- Release fetch ----
     var releaseCarouselState = { items: [], index: 0 };
+    function setLatestVersionFromTag(tag) {
+      if (!tag) return;
+      window.lmnLatestVersion = String(tag).replace(/^v/, '');
+      window.dispatchEvent(new Event('lmnLatestVersionReady'));
+    }
+    async function fetchLatestVersion() {
+      try {
+        var response = await fetch('https://api.github.com/repos/lemonade-sdk/lemonade/releases/latest');
+        if (!response.ok) throw new Error('Failed to load latest release');
+        var release = await response.json();
+        setLatestVersionFromTag(release && release.tag_name);
+      } catch (error) {}
+      return window.lmnLatestVersion || '';
+    }
     function formatReleaseTitle(release) {
       var version = release && (release.tag_name || release.name);
       if (!version) return 'Lemonade latest';
@@ -516,11 +553,11 @@
         highlights = parseBodyHighlights(release.body);
       }
       if (highlights.length > 0) {
-        releaseHighlights.innerHTML = highlights.map(function(item) {
-          return '<div class="highlight-item">' + item + '</div>';
-        }).join('');
+        releaseHighlights.innerHTML = '<ul class="highlight-list">' + highlights.map(function(item) {
+          return '<li>' + wgEscapeHtml(item) + '</li>';
+        }).join('') + '</ul>';
       } else {
-        releaseHighlights.innerHTML = '<div class="highlight-item">No headline notes published for this release.</div>';
+        releaseHighlights.innerHTML = '<p class="highlight-empty">No headline notes published for this release.</p>';
       }
       updateReleaseNavState();
     }
@@ -546,170 +583,106 @@
         if (!Array.isArray(releases)) throw new Error('Invalid release payload');
         releaseCarouselState.items = releases.filter(function(item) { return item && !item.draft; });
         if (!releaseCarouselState.items.length) throw new Error('No releases available');
+        setLatestVersionFromTag(releaseCarouselState.items[0].tag_name);
         renderReleaseAt(0);
       } catch (error) {
-        document.getElementById('releaseName').textContent = 'Lemonade latest';
-        document.getElementById('releaseDate').textContent = 'Check for updates';
-        document.getElementById('releaseLink').href = 'https://github.com/lemonade-sdk/lemonade/releases/latest';
-        document.getElementById('releaseHighlights').innerHTML = '<div class="highlight-item">Unable to load releases right now.</div>';
+        var nameEl = document.getElementById('releaseName');
+        var dateEl = document.getElementById('releaseDate');
+        var linkEl = document.getElementById('releaseLink');
+        var highlightsEl = document.getElementById('releaseHighlights');
+        if (nameEl) nameEl.textContent = 'Lemonade latest';
+        if (dateEl) dateEl.textContent = 'Check for updates';
+        if (linkEl) linkEl.href = 'https://github.com/lemonade-sdk/lemonade/releases/latest';
+        if (highlightsEl) highlightsEl.innerHTML = '<p class="highlight-empty">Unable to load releases right now.</p>';
         releaseCarouselState.items = [];
         releaseCarouselState.index = 0;
         updateReleaseNavState();
       }
     }
-    function compactCount(value) {
-      if (typeof value !== 'number' || !isFinite(value)) return null;
-      if (value >= 1000000) return (value / 1000000).toFixed(1).replace('.0', '') + 'M';
-      if (value >= 1000) return (value / 1000).toFixed(1).replace('.0', '') + 'k';
-      return String(value);
+    // ---- Working groups (live from GitHub, with hardcoded fallback) ----
+    var WG_README_URL = 'https://raw.githubusercontent.com/lemonade-sdk/lemonade/main/docs/dev/working-groups/README.md';
+    var WG_OVERVIEW_URL = 'https://lemonade-server.ai/docs/dev/working-groups/';
+    var WG_DOCS_BASE = 'https://lemonade-server.ai/docs/dev/working-groups/';
+    // Shown only if the live fetch/parse fails, so the section is never empty.
+    var WG_FALLBACK = [
+      { name: 'Omni Models', slug: 'omni-models', lead: 'jeremyfowers', goal: 'Improve Omni Models to become a staple of local AI apps and use.' },
+      { name: 'Auto-Tune', slug: 'auto-tune', lead: 'bitgamma', goal: 'Enable Lemonade instances to self-optimize models and backends.' },
+      { name: 'Cross-Vendor Support', slug: 'cross-vendor', lead: 'kenvandine', goal: 'Lemonade is supported on all mass-market hardware and OS platforms.' },
+      { name: 'Cloud Hybrid', slug: '', lead: 'ramkrishna2910', goal: 'Lemonade can intelligently route between local and cloud models.' },
+      { name: 'Remote Use', slug: '', lead: 'Geramy', goal: 'Lemonade can serve inference to any device in any location.' },
+      { name: 'GUI App', slug: '', lead: 'kponiel', goal: 'Users can explore local AI in a delightful built-in GUI.' }
+    ].map(function(g) {
+      return { name: g.name, href: g.slug ? WG_DOCS_BASE + g.slug + '/' : WG_OVERVIEW_URL, lead: g.lead, goal: g.goal };
+    });
+    function wgEscapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
-    async function fetchCommunityStats() {
-      var githubEl = document.getElementById('githubStarsCount');
-      var discordEl = document.getElementById('discordOnlineCount');
-      if (!githubEl || !discordEl) return;
-      try {
-        var repoResponse = await fetch('https://api.github.com/repos/lemonade-sdk/lemonade');
-        if (repoResponse.ok) {
-          var repoData = await repoResponse.json();
-          var stars = compactCount(repoData.stargazers_count);
-          if (stars) githubEl.textContent = stars + ' stars';
+    function wgParseLinkCell(cell) {
+      var linkMatch = cell.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      if (linkMatch) {
+        var rel = linkMatch[2].trim();
+        var href = WG_OVERVIEW_URL;
+        var fileMatch = rel.match(/([^/]+)\.md$/i);
+        if (fileMatch) {
+          var slug = fileMatch[1].toLowerCase();
+          href = slug === 'readme' ? WG_OVERVIEW_URL : WG_DOCS_BASE + slug + '/';
+        } else if (/^https?:/i.test(rel)) {
+          href = rel;
         }
-      } catch (error) {}
-      try {
-        var inviteResponse = await fetch('https://discord.com/api/v10/invites/5xXzkMu8Zk?with_counts=true');
-        if (inviteResponse.ok) {
-          var inviteData = await inviteResponse.json();
-          var online = compactCount(inviteData.approximate_presence_count);
-          if (online) discordEl.textContent = online + ' online now';
-        }
-      } catch (error) {}
-      if (githubEl.textContent.indexOf('Loading') === 0) {
-        githubEl.textContent = 'See stars';
+        return { name: linkMatch[1].trim(), href: href };
       }
-      if (discordEl.textContent.indexOf('Loading') === 0) {
-        discordEl.textContent = 'Online now';
-      }
+      return { name: cell.replace(/[*_`]/g, '').trim(), href: WG_OVERVIEW_URL };
     }
-    function initUnifiedApiSamples() {
-      var codeEl = document.getElementById('hpApiSampleCode');
-      var endpointEl = document.getElementById('hpApiSampleEndpoint');
-      var copyBtn = document.getElementById('hpApiCopyBtn');
-      var modalityButtons = document.querySelectorAll('.hp-api-modality');
-      if (!codeEl || !endpointEl || !copyBtn || modalityButtons.length === 0) return;
-
-      var samples = {
-        chat: {
-          endpoint: '/api/v1/chat/completions',
-          code: [
-            'curl -X POST http://localhost:13305/api/v1/chat/completions \\',
-            '  -H "Content-Type: application/json" \\',
-            "  -d '{",
-            '        "model": "Qwen3-0.6B-GGUF",',
-            '        "messages": [',
-            '          {"role": "user", "content": "What is the population of Paris?"}',
-            '        ],',
-            '        "stream": false',
-            "      }'"
-          ].join('\n')
-        },
-        vision: {
-          endpoint: '/api/v1/chat/completions',
-          code: [
-            'curl -X POST http://localhost:13305/api/v1/chat/completions \\',
-            '  -H "Content-Type: application/json" \\',
-            "  -d '{",
-            '        "model": "Qwen2.5-VL-7B-Instruct",',
-            '        "messages": [',
-            '          {',
-            '            "role": "user",',
-            '            "content": [',
-            '              {"type": "text", "text": "What is in this image?"},',
-            '              {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD..."}}',
-            '            ]',
-            '          }',
-            '        ],',
-            '        "stream": false',
-            "      }'"
-          ].join('\n')
-        },
-        image: {
-          endpoint: '/api/v1/images/generations',
-          code: [
-            'curl -X POST http://localhost:13305/api/v1/images/generations \\',
-            '  -H "Content-Type: application/json" \\',
-            "  -d '{",
-            '        "model": "SD-Turbo",',
-            '        "prompt": "A serene mountain landscape at sunset",',
-            '        "size": "512x512",',
-            '        "steps": 4,',
-            '        "response_format": "b64_json"',
-            "      }'"
-          ].join('\n')
-        },
-        tts: {
-          endpoint: '/api/v1/audio/speech',
-          code: [
-            'curl -X POST http://localhost:13305/api/v1/audio/speech \\',
-            '  -H "Content-Type: application/json" \\',
-            "  -d '{",
-            '        "model": "kokoro-v1",',
-            '        "input": "Lemonade can speak!",',
-            '        "speed": 1.0,',
-            '        "steps": 4,',
-            '        "response_format": "mp3"',
-            "      }'"
-          ].join('\n')
-        },
-        stt: {
-          endpoint: '/api/v1/audio/transcriptions',
-          code: [
-            'curl -X POST http://localhost:13305/api/v1/audio/transcriptions \\',
-            '  -F "file=@/path/to/audio.wav" \\',
-            '  -F "model=Whisper-Tiny"'
-          ].join('\n')
-        },
-      };
-
-      function setSample(key) {
-        var sample = samples[key];
-        if (!sample) return;
-        endpointEl.textContent = sample.endpoint;
-        codeEl.textContent = sample.code;
-        modalityButtons.forEach(function(btn) {
-          btn.classList.toggle('is-active', btn.getAttribute('data-api-sample') === key);
+    function parseWorkingGroups(markdown) {
+      var lines = markdown.replace(/\r\n/g, '\n').split('\n');
+      var groups = [];
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (line.charAt(0) !== '|') continue;
+        var cells = line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(function(c) { return c.trim(); });
+        if (cells.length < 4) continue;
+        var isSeparator = cells.every(function(c) { return /^:?-{2,}:?$/.test(c); });
+        if (isSeparator) continue;
+        if (/working group/i.test(cells[0]) || /gh handle/i.test(cells[1])) continue; // header
+        var group = wgParseLinkCell(cells[0]);
+        if (!group.name) continue;
+        groups.push({
+          name: group.name,
+          href: group.href,
+          lead: cells[1].replace(/^@/, '').trim(),
+          goal: cells[3]
         });
       }
-
-      modalityButtons.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          setSample(btn.getAttribute('data-api-sample'));
-        });
-      });
-
-      copyBtn.addEventListener('click', async function() {
-        var text = codeEl.textContent || '';
-        if (!text) return;
-        try {
-          await navigator.clipboard.writeText(text);
-        } catch (error) {
-          var helper = document.createElement('textarea');
-          helper.value = text;
-          document.body.appendChild(helper);
-          helper.select();
-          document.execCommand('copy');
-          document.body.removeChild(helper);
-        }
-        copyBtn.classList.add('is-copied');
-        copyBtn.setAttribute('aria-label', 'Code copied');
-        copyBtn.setAttribute('title', 'Code copied');
-        setTimeout(function() {
-          copyBtn.classList.remove('is-copied');
-          copyBtn.setAttribute('aria-label', 'Copy code sample');
-          copyBtn.setAttribute('title', 'Copy code sample');
-        }, 1200);
-      });
-
-      setSample('chat');
+      return groups;
+    }
+    function renderWorkingGroups(groups) {
+      var grid = document.getElementById('hpWorkingGroups');
+      if (!grid) return;
+      grid.innerHTML = groups.map(function(g) {
+        var lead = g.lead
+          ? '<span class="hp-wg-lead">@' + wgEscapeHtml(g.lead) + '</span>'
+          : '';
+        return '<a class="hp-wg-card" href="' + wgEscapeHtml(g.href) + '" target="_blank" rel="noopener">' +
+          '<h4 class="hp-wg-name">' + wgEscapeHtml(g.name) + '</h4>' +
+          (g.goal ? '<p class="hp-wg-goal">' + wgEscapeHtml(g.goal) + '</p>' : '') +
+          lead +
+        '</a>';
+      }).join('');
+      grid.setAttribute('aria-busy', 'false');
+    }
+    async function initWorkingGroups() {
+      var grid = document.getElementById('hpWorkingGroups');
+      if (!grid) return;
+      try {
+        var response = await fetch(WG_README_URL);
+        if (!response.ok) throw new Error('Failed to load working groups');
+        var groups = parseWorkingGroups(await response.text());
+        if (!groups.length) throw new Error('No working groups parsed');
+        renderWorkingGroups(groups);
+      } catch (error) {
+        renderWorkingGroups(WG_FALLBACK);
+      }
     }
     function parseHeadlineSection(body) {
       var lines = body.replace(/\r\n/g, '\n').split('\n');
@@ -743,9 +716,49 @@
     document.addEventListener('DOMContentLoaded', function() {
       if (typeof initializeNavbar === 'function') initializeNavbar('./');
       fetchLatestRelease();
-      fetchCommunityStats();
-      initUnifiedApiSamples();
+      initWorkingGroups();
       if (typeof initializeFooter === 'function') initializeFooter('../');
+      if (typeof fetchLatestVersion === 'function') fetchLatestVersion();
+      if (typeof gsInit === 'function') gsInit();
+      // Engine logo ticker
+      (function() {
+        var track = document.getElementById('hpLogoTickerTrack');
+        if (!track) return;
+        var base = 'https://raw.githubusercontent.com/lemonade-sdk/assets/main/engines/';
+        var logos = [
+          { href: 'https://github.com/ggml-org/llama.cpp', img: 'llama_cpp.png', alt: 'llama.cpp' },
+          { href: 'https://github.com/microsoft/onnxruntime', img: 'onnx_runtime.png', alt: 'ONNX Runtime' },
+          { href: 'https://github.com/FastFlowLM/FastFlowLM', img: 'fastflowlm.png', alt: 'FastFlowLM' },
+          { href: 'https://github.com/amd/RyzenAI-SW', img: 'ryzen_ai_sw.png', alt: 'Ryzen AI SW' },
+          { href: 'https://rocm.docs.amd.com/', img: 'rocm.png', alt: 'ROCm' },
+          { href: 'https://huggingface.co/', img: 'hugging_face.png', alt: 'Hugging Face' },
+          { href: 'https://www.vulkan.org/', img: 'vulkan.png', alt: 'Vulkan' },
+          { href: 'https://github.com/ggml-org/whisper.cpp', img: 'whisper_cpp.png', alt: 'whisper.cpp' },
+          { href: 'https://github.com/leejet/stable-diffusion.cpp', img: 'stable_diffusion_cpp.png', alt: 'stable-diffusion.cpp' },
+          { href: 'https://github.com/lucasjinreal/Kokoros', img: 'kokoros.png', alt: 'Kokoros' }
+        ];
+        var html = logos.map(function(l) {
+          return '<a href="' + l.href + '" title="' + l.alt + '" target="_blank" rel="noopener" class="hp-logo-chip">' +
+            '<img src="' + base + l.img + '" alt="' + l.alt + '" /></a>';
+        }).join('');
+        // Duplicate for seamless loop
+        track.innerHTML = html + html;
+      })();
+      // Featured apps from marketplace
+      if (typeof fetchFeaturedApps === 'function') {
+        fetchFeaturedApps(12).then(function(apps) {
+          var grid = document.getElementById('hpEcoApps');
+          if (!grid || !apps.length) return;
+          grid.innerHTML = apps.map(function(app) {
+            var href = (app.links && (app.links.guide || app.links.app)) || '#';
+            var logo = app.logo || '';
+            var name = app.name || '';
+            return '<a href="' + href + '" title="' + name + '" target="_blank" class="hp-eco-app">' +
+              '<img src="' + logo + '" alt="' + name + '" />' +
+              '<span class="hp-eco-app-name">' + name + '</span></a>';
+          }).join('');
+        });
+      }
       if (document.getElementById('lmn-install-view').style.display === 'flex') {
         if (typeof lmnInit === 'function') lmnInit();
       }

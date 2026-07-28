@@ -1,6 +1,7 @@
 #include "lemon_cli/model_selection.h"
 #include "lemon_cli/recipe_import.h"
 
+#include "lemon/model_types.h"
 #include "lemon/utils/aixlog.hpp"
 
 #include <algorithm>
@@ -83,6 +84,10 @@ bool fetch_models_from_endpoint(lemonade::LemonadeClient& client,
         }
 
         return true;
+    } catch (const lemonade::HttpError& e) {
+        LOG(ERROR, "ModelSelector") << "Error: Failed to query /api/v1/models: "
+                                    << lemonade::extract_server_error_message(e) << std::endl;
+        return false;
     } catch (const std::exception& e) {
         LOG(ERROR, "ModelSelector") << "Error: Failed to query /api/v1/models: " << e.what() << std::endl;
         return false;
@@ -93,8 +98,26 @@ bool has_label(const lemonade::ModelInfo& model, const std::string& label) {
     return std::find(model.labels.begin(), model.labels.end(), label) != model.labels.end();
 }
 
+bool is_agent_launch_recipe(const std::string& recipe) {
+    static const std::unordered_set<std::string> kAgentLaunchRecipes = {
+        "flm",
+        "llamacpp",
+        "vllm",
+    };
+    return kAgentLaunchRecipes.find(recipe) != kAgentLaunchRecipes.end();
+}
+
+bool is_agent_launch_llm(const lemonade::ModelInfo& model) {
+    return is_agent_launch_recipe(model.recipe) &&
+           lemon::get_model_type_from_labels(model.labels) == lemon::ModelType::LLM;
+}
+
+bool is_tool_calling_agent_launch_llm(const lemonade::ModelInfo& model) {
+    return is_agent_launch_llm(model) && has_label(model, "tool-calling");
+}
+
 bool is_recommended_for_launch(const lemonade::ModelInfo& model) {
-    return model.recipe == "llamacpp" && has_label(model, "hot") && has_label(model, "tool-calling");
+    return is_tool_calling_agent_launch_llm(model) && has_label(model, "hot");
 }
 
 bool is_recommended_for_run(const lemonade::ModelInfo& model) {
@@ -110,9 +133,29 @@ std::string normalize_agent_key(const std::string& agent_name) {
     return key;
 }
 
+bool starts_with_case_insensitive(const std::string& value, const std::string& prefix) {
+    if (prefix.size() > value.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < prefix.size(); ++i) {
+        const char lhs = static_cast<char>(std::tolower(static_cast<unsigned char>(value[i])));
+        const char rhs = static_cast<char>(std::tolower(static_cast<unsigned char>(prefix[i])));
+        if (lhs != rhs) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool is_qwen35_family_model(const lemonade::ModelInfo& model) {
+    return starts_with_case_insensitive(model.id, "Qwen3.5");
+}
+
 std::vector<std::string> preferred_recipe_directories_for_agent(const std::string& agent_name) {
     const std::string agent = normalize_agent_key(agent_name);
-    if (agent == "claude" || agent == "codex") {
+    if (agent == "claude" || agent == "codex" || agent == "opencode" || agent == "pi") {
         return {"coding-agents"};
     }
     return {};
@@ -144,13 +187,21 @@ bool prompt_model_name_input(std::string& model_out) {
 }
 
 std::vector<const lemonade::ModelInfo*> filter_recommended_launch_models(
-    const std::vector<lemonade::ModelInfo>& models) {
+    const std::vector<lemonade::ModelInfo>& models,
+    const std::string& agent_name) {
     std::vector<const lemonade::ModelInfo*> filtered;
     filtered.reserve(models.size());
+    const bool exclude_qwen35_for_codex = normalize_agent_key(agent_name) == "codex";
+
     for (const auto& model : models) {
-        if (is_recommended_for_launch(model)) {
-            filtered.push_back(&model);
+        if (!is_recommended_for_launch(model)) {
+            continue;
         }
+        if (exclude_qwen35_for_codex && is_qwen35_family_model(model)) {
+            continue;
+        }
+
+        filtered.push_back(&model);
     }
     return filtered;
 }
@@ -167,6 +218,7 @@ bool prompt_launch_recipe_first(lemonade::LemonadeClient& client,
 
     MenuState state = MenuState::RecipeDirectories;
     std::string selected_recipe_dir;
+    const bool is_codex_agent = normalize_agent_key(agent_name) == "codex";
     bool use_preferred_recipe_dir = false;
     std::string preferred_recipe_dir;
     bool remote_dirs_loaded = false;
@@ -296,6 +348,14 @@ bool prompt_launch_recipe_first(lemonade::LemonadeClient& client,
                           << "' to import and use:" << std::endl;
             }
 
+            if (is_codex_agent) {
+                std::cout
+                    << "\nWarning: Qwen 3.5 family models currently do not work with Codex due to "
+                    << "a llama.cpp incompatibility. Track upstream: "
+                    << "https://github.com/ggml-org/llama.cpp/issues/20733\n"
+                    << std::endl;
+            }
+
             if (in_preferred_recipe_dir) {
                 std::cout << "  0) Browse downloaded models" << std::endl;
             } else {
@@ -363,24 +423,32 @@ bool prompt_launch_recipe_first(lemonade::LemonadeClient& client,
             if (!fetch_models_from_endpoint(client, false, downloaded_models)) {
                 return false;
             }
-            std::vector<const lemonade::ModelInfo*> downloaded_llamacpp_models;
-            downloaded_llamacpp_models.reserve(downloaded_models.size());
+            std::vector<const lemonade::ModelInfo*> downloaded_llm_models;
+            downloaded_llm_models.reserve(downloaded_models.size());
             for (const auto& model : downloaded_models) {
-                if (model.recipe == "llamacpp") {
-                    downloaded_llamacpp_models.push_back(&model);
+                if (is_tool_calling_agent_launch_llm(model)) {
+                    downloaded_llm_models.push_back(&model);
                 }
             }
 
-            std::cout << "Browse downloaded llamacpp models:" << std::endl;
+            if (is_codex_agent) {
+                std::cout
+                    << "\nWarning: Qwen 3.5 family models currently do not work with Codex due to "
+                    << "a llama.cpp incompatibility. Track upstream: "
+                    << "https://github.com/ggml-org/llama.cpp/issues/20733\n"
+                    << std::endl;
+            }
+
+            std::cout << "Browse downloaded tool-calling LLMs:" << std::endl;
             std::cout << "  0) Browse recommended models (download may be required)" << std::endl;
-            for (size_t i = 0; i < downloaded_llamacpp_models.size(); ++i) {
-                const auto& model = *downloaded_llamacpp_models[i];
+            for (size_t i = 0; i < downloaded_llm_models.size(); ++i) {
+                const auto& model = *downloaded_llm_models[i];
                 std::cout << "  " << (i + 1) << ") " << model.id
                           << " [downloaded]"
                           << " (" << (model.recipe.empty() ? "-" : model.recipe) << ")"
                           << std::endl;
             }
-            const int back_to_recipe_dirs = static_cast<int>(downloaded_llamacpp_models.size()) + 1;
+            const int back_to_recipe_dirs = static_cast<int>(downloaded_llm_models.size()) + 1;
             if (use_preferred_recipe_dir) {
                 std::cout << "  " << back_to_recipe_dirs << ") Back to recipes" << std::endl;
             } else {
@@ -388,8 +456,8 @@ bool prompt_launch_recipe_first(lemonade::LemonadeClient& client,
                           << std::endl;
             }
 
-            if (downloaded_llamacpp_models.empty()) {
-                std::cout << "No downloaded llamacpp models found." << std::endl;
+            if (downloaded_llm_models.empty()) {
+                std::cout << "No downloaded tool-calling LLMs found." << std::endl;
             }
 
             int selected = 0;
@@ -405,12 +473,12 @@ bool prompt_launch_recipe_first(lemonade::LemonadeClient& client,
                 state = MenuState::RecipeDirectories;
                 continue;
             }
-            if (selected < 1 || static_cast<size_t>(selected) > downloaded_llamacpp_models.size()) {
+            if (selected < 1 || static_cast<size_t>(selected) > downloaded_llm_models.size()) {
                 LOG(ERROR, "ModelSelector") << "Error: Selection out of range." << std::endl;
                 return false;
             }
 
-            model_out = downloaded_llamacpp_models[static_cast<size_t>(selected - 1)]->id;
+            model_out = downloaded_llm_models[static_cast<size_t>(selected - 1)]->id;
             std::cout << "Selected model: " << model_out << std::endl;
             return true;
         }
@@ -422,9 +490,9 @@ bool prompt_launch_recipe_first(lemonade::LemonadeClient& client,
             }
 
             std::vector<const lemonade::ModelInfo*> recommended_all =
-                filter_recommended_launch_models(all_models);
+                filter_recommended_launch_models(all_models, agent_name);
 
-            std::cout << "Browse recommended models (llamacpp + hot + tool-calling):" << std::endl;
+            std::cout << "Browse recommended LLMs (hot + tool-calling):" << std::endl;
             std::cout << "  0) Back to downloaded models" << std::endl;
             for (size_t i = 0; i < recommended_all.size(); ++i) {
                 const auto& model = *recommended_all[i];
@@ -478,7 +546,7 @@ bool prompt_model_selection(lemonade::LemonadeClient& client,
     std::vector<const lemonade::ModelInfo*> display_models;
     display_models.reserve(models.size());
     for (const auto& model : models) {
-        if (!show_all && model.recipe != "llamacpp") {
+        if (!show_all && !is_agent_launch_llm(model)) {
             continue;
         }
         display_models.push_back(&model);

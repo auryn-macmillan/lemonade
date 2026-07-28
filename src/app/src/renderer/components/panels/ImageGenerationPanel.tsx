@@ -9,6 +9,7 @@ import InferenceControls from '../InferenceControls';
 import ModelSelector from '../ModelSelector';
 import EmptyState from '../EmptyState';
 import { ImageUploadIcon } from '../Icons';
+import { isCollectionModel, getCollectionImageModel } from '../../utils/collectionModels';
 
 type ImageMode = 'generate' | 'edit' | 'variations';
 
@@ -23,7 +24,7 @@ interface ImageSettings {
   cfgScale: number;
   width: number;
   height: number;
-  seed: number;
+  seed: number | '';
   upscaleModel: string;
 }
 
@@ -32,7 +33,7 @@ const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   cfgScale: 7.0,
   width: 512,
   height: 512,
-  seed: -1,
+  seed: 42,
   upscaleModel: '',
 };
 
@@ -72,7 +73,12 @@ const ImageGenerationPanel: React.FC<ImageGenerationPanelProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supportsEdit = useMemo(() => {
-    return modelsData[selectedModel]?.labels?.includes('edit') || false;
+    const info = modelsData[selectedModel];
+    if (isCollectionModel(info)) {
+      const imageModel = getCollectionImageModel(selectedModel, modelsData);
+      return imageModel ? modelsData[imageModel]?.labels?.includes('edit') || false : false;
+    }
+    return info?.labels?.includes('edit') || false;
   }, [selectedModel, modelsData]);
 
   useEffect(() => {
@@ -83,15 +89,15 @@ const ImageGenerationPanel: React.FC<ImageGenerationPanelProps> = ({
       cfgScale: defaults?.cfg_scale ?? DEFAULT_IMAGE_SETTINGS.cfgScale,
       width: defaults?.width ?? DEFAULT_IMAGE_SETTINGS.width,
       height: defaults?.height ?? DEFAULT_IMAGE_SETTINGS.height,
-      seed: -1,
+      seed: DEFAULT_IMAGE_SETTINGS.seed,
       upscaleModel: prev.upscaleModel,
     }));
     // Reset to generate mode if the new model doesn't support editing
-    if (!modelsData[selectedModel]?.labels?.includes('edit') && imageMode !== 'generate') {
+    if (!supportsEdit && imageMode !== 'generate') {
       setImageMode('generate');
       setReferenceImage(null);
     }
-  }, [selectedModel, modelsData]);
+  }, [selectedModel, modelsData, supportsEdit]);
 
   const handleUpscaleChange = async (upscaleModel: string) => {
     setImageSettings(prev => ({ ...prev, upscaleModel }));
@@ -100,7 +106,10 @@ const ImageGenerationPanel: React.FC<ImageGenerationPanelProps> = ({
         const res = await serverFetch(`/models/${upscaleModel}`);
         const info = await res.json();
         if (!info.downloaded) {
-          await pullModel(upscaleModel, { showInDownloadManager: true });
+          await pullModel(upscaleModel, {
+            showInDownloadManager: true,
+            declaredSizeGB: info.size,
+          });
         }
       } catch (error: any) {
         console.error('Failed to download upscale model:', error);
@@ -152,6 +161,8 @@ const ImageGenerationPanel: React.FC<ImageGenerationPanelProps> = ({
     return serverFetch(endpoint, { method: 'POST', body: formData });
   };
 
+  const resolvedSeed = (): number => imageSettings.seed === '' ? -1 : imageSettings.seed;
+
   const handleImageGeneration = async () => {
     if (imageMode === 'edit') {
       await handleImageEdit();
@@ -185,9 +196,7 @@ const ImageGenerationPanel: React.FC<ImageGenerationPanelProps> = ({
         response_format: 'b64_json',
       };
 
-      if (imageSettings.seed > 0) {
-        requestBody.seed = imageSettings.seed;
-      }
+      requestBody.seed = resolvedSeed();
 
       const genStart = Date.now();
       const genResponse = await serverFetch('/images/generations', {
@@ -286,7 +295,7 @@ const ImageGenerationPanel: React.FC<ImageGenerationPanelProps> = ({
         form.append('prompt', currentPrompt);
         form.append('steps', String(imageSettings.steps));
         form.append('cfg_scale', String(imageSettings.cfgScale));
-        if (imageSettings.seed > 0) form.append('seed', String(imageSettings.seed));
+        form.append('seed', String(resolvedSeed()));
       });
 
       if (!response.ok) {
@@ -567,7 +576,15 @@ const ImageGenerationPanel: React.FC<ImageGenerationPanelProps> = ({
           <div className="image-setting">
             <label>Seed</label>
             <input type="number" min="-1" value={imageSettings.seed}
-              onChange={(e) => setImageSettings(prev => ({ ...prev, seed: parseInt(e.target.value) || -1 }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  setImageSettings(prev => ({ ...prev, seed: '' }));
+                  return;
+                }
+                const seed = parseInt(value, 10);
+                setImageSettings(prev => ({ ...prev, seed: Number.isNaN(seed) ? -1 : Math.max(seed, -1) }));
+              }}
               disabled={isBusy} placeholder="-1 = random" />
           </div>
         )}
@@ -578,7 +595,7 @@ const ImageGenerationPanel: React.FC<ImageGenerationPanelProps> = ({
             disabled={isBusy}>
             <option value="">Off</option>
             {Object.entries(modelsData)
-              .filter(([_, info]) => info.labels?.includes('esrgan'))
+              .filter(([_, info]) => info.labels?.includes('upscaling'))
               .map(([name]) => (
                 <option key={name} value={name}>{name}</option>
               ))}

@@ -9,7 +9,7 @@ Usage:
     python server_whisper.py --wrapped-server whispercpp --backend npu
     python server_whisper.py --wrapped-server whispercpp --backend vulkan
     python server_whisper.py --wrapped-server flm
-    python server_whisper.py --server-binary /path/to/lemonade-server
+    python server_whisper.py --cli-binary /path/to/lemonade
 
     # Backward compatible (defaults to whispercpp):
     python server_whisper.py --backend cpu
@@ -98,14 +98,8 @@ class WhisperTests(ServerTestBase):
                 pass  # Ignore cleanup errors
         super().tearDownClass()
 
-    def test_001_transcription_basic(self):
-        """Test basic audio transcription with Whisper."""
-        self.assertIsNotNone(self._test_audio_path, "Test audio file not downloaded")
-        self.assertTrue(
-            os.path.exists(self._test_audio_path),
-            f"Test audio file not found at {self._test_audio_path}",
-        )
-
+    def _load_whisper_model_or_fail(self):
+        """Load the configured Whisper model before positive transcription tests."""
         model = _get_whisper_model()
         whispercpp_backend = _get_whispercpp_backend()
 
@@ -121,11 +115,27 @@ class WhisperTests(ServerTestBase):
                 json=load_payload,
                 timeout=TIMEOUT_MODEL_OPERATION,
             )
-            if load_response.status_code != 200:
-                self.skipTest(
-                    f"{whispercpp_backend} backend not available: {load_response.text}"
-                )
-                return
+            self.assertEqual(
+                load_response.status_code,
+                200,
+                (
+                    f"Failed to load model {model} with {whispercpp_backend} "
+                    f"backend: {load_response.text}"
+                ),
+            )
+
+        return model
+
+    def test_001_transcription_basic(self):
+        """Test basic audio transcription with Whisper."""
+        self.assertIsNotNone(self._test_audio_path, "Test audio file not downloaded")
+        self.assertTrue(
+            os.path.exists(self._test_audio_path),
+            f"Test audio file not found at {self._test_audio_path}",
+        )
+
+        model = self._load_whisper_model_or_fail()
+        whispercpp_backend = _get_whispercpp_backend()
 
         with open(self._test_audio_path, "rb") as audio_file:
             files = {"file": ("test_speech.wav", audio_file, "audio/wav")}
@@ -161,7 +171,7 @@ class WhisperTests(ServerTestBase):
         """Test audio transcription with explicit language parameter."""
         self.assertIsNotNone(self._test_audio_path, "Test audio file not downloaded")
 
-        model = _get_whisper_model()
+        model = self._load_whisper_model_or_fail()
 
         with open(self._test_audio_path, "rb") as audio_file:
             files = {"file": ("test_speech.wav", audio_file, "audio/wav")}
@@ -350,6 +360,102 @@ class WhisperTests(ServerTestBase):
             websocket_base_url=f"ws://localhost:{ws_port}",
         )
 
+    def _get_pcm16_chunks(self):
+        """Load test audio and split it into ~64ms PCM16 chunks."""
+        self.assertIsNotNone(self._test_audio_path, "Test audio file not downloaded")
+
+        pcm_data = self._load_pcm16_from_wav()
+        self.assertGreater(len(pcm_data), 0, "PCM data should not be empty")
+        print(
+            f"[INFO] Loaded {len(pcm_data)} bytes of PCM16 audio "
+            f"({len(pcm_data) // 2} samples, "
+            f"{len(pcm_data) // 2 / 16000:.1f}s)"
+        )
+
+        # 2048 bytes @ 16kHz/16-bit = 64ms, which is less than VAD's
+        # 100ms analysis window — prevents flaky CI runs.
+        chunk_size = 2048
+        chunks = [
+            pcm_data[i : i + chunk_size] for i in range(0, len(pcm_data), chunk_size)
+        ]
+        print(f"[INFO] Split into {len(chunks)} chunks")
+        return chunks
+
+    def _event_payload(self, event):
+        """Return a best-effort dict representation of an SDK realtime event."""
+        if isinstance(event, dict):
+            return event
+
+        for dump_method in ("model_dump", "dict"):
+            method = getattr(event, dump_method, None)
+            if method is None:
+                continue
+            try:
+                payload = method()
+            except Exception:
+                continue
+            if isinstance(payload, dict):
+                return payload
+
+        return {}
+
+    def _event_value(self, event, *field_names):
+        """Read a field from either an SDK event object or a plain dict."""
+        for field_name in field_names:
+            if isinstance(event, dict):
+                value = event.get(field_name)
+            else:
+                value = getattr(event, field_name, None)
+            if value is not None:
+                return value
+
+        payload = self._event_payload(event)
+        for field_name in field_names:
+            value = payload.get(field_name)
+            if value is not None:
+                return value
+
+        return None
+
+    def _event_type(self, event):
+        """Return the realtime event type for SDK event objects or dicts."""
+        return self._event_value(event, "type") or "<missing type>"
+
+    def _event_text(self, event, *field_names):
+        """Extract the first non-empty text field from a realtime event."""
+        payload = self._event_payload(event)
+
+        for field_name in field_names:
+            values = []
+            value = self._event_value(event, field_name)
+            if value is not None:
+                values.append(value)
+            if field_name in payload:
+                values.append(payload[field_name])
+
+            for value in values:
+                if isinstance(value, str):
+                    if value.strip():
+                        return value
+                elif value is not None:
+                    value = str(value)
+                    if value.strip():
+                        return value
+
+        return ""
+
+    async def _drain_realtime_events(self, conn, timeout_s=0.25):
+        """Collect any pending realtime events until a short timeout expires."""
+        events = []
+        while True:
+            try:
+                event = await asyncio.wait_for(conn.recv(), timeout=timeout_s)
+                print(f"[INFO] Drained message: {self._event_type(event)}")
+                events.append(event)
+            except asyncio.TimeoutError:
+                break
+        return events
+
     @skip_if_unsupported("realtime_websocket")
     def test_006_realtime_websocket_connect(self):
         """Test WebSocket connection and session creation via OpenAI SDK."""
@@ -396,25 +502,8 @@ class WhisperTests(ServerTestBase):
         asyncio.run(self._test_007_realtime_websocket_transcription())
 
     async def _test_007_realtime_websocket_transcription(self):
-        self.assertIsNotNone(self._test_audio_path, "Test audio file not downloaded")
-
         model = _get_whisper_model()
-
-        # Load audio as PCM16 mono 16kHz
-        pcm_data = self._load_pcm16_from_wav()
-        self.assertGreater(len(pcm_data), 0, "PCM data should not be empty")
-        print(
-            f"[INFO] Loaded {len(pcm_data)} bytes of PCM16 audio "
-            f"({len(pcm_data) // 2} samples, "
-            f"{len(pcm_data) // 2 / 16000:.1f}s)"
-        )
-
-        # Split into ~256ms chunks (4096 samples * 2 bytes = 8192 bytes)
-        chunk_size = 8192
-        chunks = [
-            pcm_data[i : i + chunk_size] for i in range(0, len(pcm_data), chunk_size)
-        ]
-        print(f"[INFO] Split into {len(chunks)} chunks")
+        chunks = self._get_pcm16_chunks()
 
         client = self._make_openai_client()
 
@@ -440,21 +529,129 @@ class WhisperTests(ServerTestBase):
             print("[INFO] Committing audio buffer...")
             await conn.input_audio_buffer.commit()
 
-            # Collect messages until we get the transcription result
-            transcript = None
-            deadline = time.time() + TIMEOUT_MODEL_OPERATION
-            while time.time() < deadline:
-                try:
-                    event = await asyncio.wait_for(conn.recv(), timeout=30)
-                    print(f"[INFO] Received message: {event.type}")
+            # Collect messages until the server reports that transcription completed.
+            # Some SDK/server combinations expose interim text on delta events, while
+            # completed events may only signal completion and carry an empty transcript.
+            transcript_parts = []
+            completed_transcript = ""
+            saw_completed = False
+            received_event_types = []
+            deadline = time.monotonic() + TIMEOUT_MODEL_OPERATION
 
-                    if (
-                        event.type
-                        == "conversation.item.input_audio_transcription.completed"
-                    ):
-                        transcript = getattr(event, "transcript", "")
-                        break
+            while time.monotonic() < deadline:
+                timeout_s = max(0.1, min(30, deadline - time.monotonic()))
+                try:
+                    event = await asyncio.wait_for(conn.recv(), timeout=timeout_s)
                 except asyncio.TimeoutError:
+                    break
+
+                event_type = self._event_type(event)
+                received_event_types.append(event_type)
+                print(f"[INFO] Received message: {event_type}")
+
+                if event_type == "error":
+                    self.fail(f"Realtime transcription returned error: {event}")
+
+                if event_type == "conversation.item.input_audio_transcription.delta":
+                    delta = self._event_text(event, "delta", "transcript", "text")
+                    if delta:
+                        transcript_parts.append(delta)
+                    continue
+
+                if (
+                    event_type
+                    == "conversation.item.input_audio_transcription.completed"
+                ):
+                    saw_completed = True
+                    completed_transcript = self._event_text(
+                        event, "transcript", "text", "delta"
+                    )
+                    break
+
+        transcript = (completed_transcript or "".join(transcript_parts)).strip()
+
+        self.assertTrue(
+            saw_completed,
+            (
+                "Should receive a transcription completion event; "
+                f"received events: {received_event_types}"
+            ),
+        )
+        self.assertGreater(
+            len(transcript),
+            0,
+            (
+                "Transcription should not be empty; "
+                f"received events: {received_event_types}"
+            ),
+        )
+        print(f"[OK] WebSocket transcription result: {transcript}")
+
+    @skip_if_unsupported("realtime_websocket")
+    def test_008_realtime_manual_commit(self):
+        """Test manual-commit realtime transcription with turn_detection disabled."""
+        asyncio.run(self._test_008_realtime_manual_commit())
+
+    async def _test_008_realtime_manual_commit(self):
+        model = _get_whisper_model()
+        chunks = self._get_pcm16_chunks()
+
+        client = self._make_openai_client()
+
+        async with client.beta.realtime.connect(model=model) as conn:
+            event = await asyncio.wait_for(conn.recv(), timeout=10)
+            self.assertEqual(event.type, "session.created")
+
+            await conn.session.update(session={"model": model, "turn_detection": None})
+            event = await asyncio.wait_for(conn.recv(), timeout=10)
+            self.assertEqual(event.type, "session.updated")
+
+            print(f"[INFO] Sending {len(chunks)} audio chunks...")
+            for chunk in chunks:
+                b64 = base64.b64encode(chunk).decode("ascii")
+                await conn.input_audio_buffer.append(audio=b64)
+                await asyncio.sleep(0.01)
+
+            buffered_events = await self._drain_realtime_events(conn)
+            self.assertEqual(
+                [event.type for event in buffered_events],
+                [],
+                "Manual commit mode should not emit events while buffering audio",
+            )
+
+            print("[INFO] Committing audio buffer...")
+            await conn.input_audio_buffer.commit()
+
+            transcript = None
+            deadline = time.monotonic() + TIMEOUT_MODEL_OPERATION
+            while time.monotonic() < deadline:
+                timeout_s = max(0.1, min(30, deadline - time.monotonic()))
+                try:
+                    event = await asyncio.wait_for(conn.recv(), timeout=timeout_s)
+                except asyncio.TimeoutError:
+                    break
+
+                event_type = self._event_type(event)
+                print(f"[INFO] Received message: {event_type}")
+
+                if event_type == "error":
+                    self.fail(f"Realtime transcription returned error: {event}")
+
+                self.assertNotIn(
+                    event_type,
+                    {
+                        "input_audio_buffer.speech_started",
+                        "input_audio_buffer.speech_stopped",
+                        "conversation.item.input_audio_transcription.delta",
+                    },
+                    "Manual commit mode should not emit VAD or interim events",
+                )
+
+                if (
+                    event_type
+                    == "conversation.item.input_audio_transcription.completed"
+                ):
+                    transcript = self._event_text(event, "transcript", "text", "delta")
                     break
 
         self.assertIsNotNone(transcript, "Should receive a transcription result")
@@ -463,7 +660,7 @@ class WhisperTests(ServerTestBase):
             0,
             "Transcription should not be empty",
         )
-        print(f"[OK] WebSocket transcription result: {transcript}")
+        print(f"[OK] Manual commit transcription result: {transcript}")
 
 
 if __name__ == "__main__":

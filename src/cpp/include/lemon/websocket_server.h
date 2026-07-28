@@ -1,16 +1,18 @@
 #pragma once
 
-#include <string>
-#include <memory>
 #include <atomic>
-#include <thread>
-#include <unordered_map>
-#include <mutex>
 #include <functional>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <queue>
+#include <string>
+#include <thread>
+#include <unordered_map>
+
 #include <libwebsockets.h>
 #include <nlohmann/json.hpp>
+
 #include "log_stream.h"
 #include "realtime_session.h"
 
@@ -65,32 +67,65 @@ public:
      */
     int get_port() const { return port_; }
 
+    /**
+     * Adopt an already-accepted TCP socket carrying an HTTP WebSocket
+     * upgrade request (bytes unconsumed). Used by the main HTTP server to
+     * upgrade /realtime and /logs/stream connections on its own port.
+     * Thread-safe; ownership of the socket transfers on success.
+     */
+    bool adopt_socket(intptr_t fd);
+
     // libwebsockets callback (public — referenced by file-scope protocols array)
     static int ws_callback(struct lws* wsi, enum lws_callback_reasons reason,
                            void* user, void* in, size_t len);
 
+    /**
+     * Broadcast a completed trace span to all authorized subscribers.
+     */
+    void broadcast_span(const json& span);
+
+    /**
+     * Check if there are any active WebSocket clients subscribed to spans.
+     */
+    bool has_span_listeners();
+
+    /**
+     * Check if a path corresponds to a valid WebSocket upgrade endpoint.
+     */
+    static bool is_websocket_path(const std::string& path);
 private:
     enum class ConnectionKind {
         invalid,
         realtime,
         logs,
+        spans,
     };
 
     struct ConnectionState {
         ConnectionKind kind = ConnectionKind::invalid;
         std::string realtime_session_id;
         std::string log_subscriber_id;
+        std::string authenticated_token;
+        std::string authenticated_token_hash;
+        std::string client_session_id;
+        bool authenticated = false;
     };
 
     int port_;
     std::string host_;
     std::string api_key_;
-    Router* router_;
+    std::string admin_api_key_;
     std::unique_ptr<RealtimeSessionManager> session_manager_;
     struct lws_context* context_{nullptr};
+    struct lws_vhost* vhost_{nullptr};
     std::thread service_thread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> writable_dispatch_pending_{false};
+    std::mutex context_mutex_;
+
+    // Sockets handed over by the HTTP server, adopted on the service thread
+    std::queue<intptr_t> pending_adoptions_;
+    std::mutex adoption_mutex_;
 
     std::unordered_map<std::string, ConnectionState> connection_states_;
     // Map connection IDs to lws wsi pointers for sending
@@ -100,6 +135,7 @@ private:
     // Per-connection inbound reassembly buffers (libwebsockets may fragment frames)
     std::unordered_map<std::string, std::string> receive_buffers_;
     std::mutex connections_mutex_;
+    bool telemetry_listener_registered_{false};
 
     // Handle new WebSocket connection
     void handle_connection(const std::string& connection_id, struct lws* wsi);
@@ -115,8 +151,11 @@ private:
 
     bool authenticate_connection(struct lws* wsi) const;
     static std::optional<std::string> get_header(struct lws* wsi, enum lws_token_indexes token);
+    static std::optional<std::string> get_protocol_credential(struct lws* wsi);
     static std::optional<std::string> get_url_arg(struct lws* wsi, const char* name);
     static std::string get_request_path(struct lws* wsi);
+    std::string strip_bearer_prefix(const std::string& token) const;
+    std::string extract_token_from_wsi(struct lws* wsi) const;
     static ConnectionKind classify_path(const std::string& path);
 
     // Send JSON message to WebSocket by connection ID
@@ -127,9 +166,13 @@ private:
     void handle_realtime_connection(const std::string& connection_id,
                                     struct lws* wsi);
     void schedule_pending_writes();
+    void update_telemetry_listener_registration();
+    void drain_pending_adoptions();
 
     // Service loop run in background thread
     void service_loop();
 };
+
+bool is_websocket_endpoint(const std::string& path);
 
 } // namespace lemon

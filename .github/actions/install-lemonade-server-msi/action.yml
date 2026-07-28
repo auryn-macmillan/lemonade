@@ -13,7 +13,7 @@ runs:
   using: "composite"
   steps:
     - name: Download Lemonade Server Installer
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.artifact-name }}
         path: .
@@ -82,7 +82,6 @@ runs:
         # Check for key binaries
         $expectedBinaries = @(
             "bin\LemonadeServer.exe",
-            "bin\lemonade-server.exe",
             "bin\lemonade.exe"
         )
 
@@ -112,22 +111,19 @@ runs:
       run: |
         $ErrorActionPreference = "Stop"
         $installPath = "${{ inputs.install-path }}"
-        $serverExe = Join-Path $installPath "bin\lemonade-server.exe"
+        $cliExe = Join-Path $installPath "bin\lemonade.exe"
 
-        Write-Host "Checking lemonade-server version..." -ForegroundColor Cyan
+        Write-Host "Checking lemonade --version..." -ForegroundColor Cyan
 
         try {
-            # Capture output and exit code
-            $process = Start-Process -FilePath $serverExe -ArgumentList "--version" -NoNewWindow -Wait -PassThru
+            $process = Start-Process -FilePath $cliExe -ArgumentList "--version" -NoNewWindow -Wait -PassThru
 
             if ($process.ExitCode -ne 0) {
-                Write-Host "ERROR: lemonade-server --version exited with code $($process.ExitCode)" -ForegroundColor Red
+                Write-Host "ERROR: lemonade --version exited with code $($process.ExitCode)" -ForegroundColor Red
                 exit 1
             }
 
-            # Run again to capture output for display (Start-Process -PassThru doesn't easily capture stdout to variable without redirect)
-            # Simpler approach for display:
-            & $serverExe --version
+            & $cliExe --version
 
             Write-Host "Version check passed (Exit Code 0)" -ForegroundColor Green
 
@@ -150,13 +146,14 @@ runs:
         $installPath = "${{ inputs.install-path }}"
         $serverExe = Join-Path $installPath "bin\LemonadeServer.exe"
 
-        # --- Kill the MSI-auto-started server ---
-        Write-Host "Stopping MSI-auto-started LemonadeServer.exe..." -ForegroundColor Cyan
+        # --- Kill the MSI-auto-started server and its subprocess ---
+        Write-Host "Stopping MSI-auto-started LemonadeServer.exe and lemond.exe..." -ForegroundColor Cyan
         Stop-Process -Name LemonadeServer -Force -ErrorAction SilentlyContinue
-        # Wait for port 13305 to be released
+        Stop-Process -Name lemond -Force -ErrorAction SilentlyContinue
+        # Wait for ports to be released (13305 for LemonadeServer, 8000 for orphan lemond)
         $portWait = 0
         while ($portWait -lt 10) {
-          $listening = netstat -an | Select-String ":13305 .*LISTENING"
+          $listening = netstat -an | Select-String ":(13305|8000) .*LISTENING"
           if (-not $listening) { break }
           Start-Sleep -Seconds 1
           $portWait++

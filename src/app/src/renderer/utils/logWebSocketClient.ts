@@ -1,4 +1,4 @@
-import { getAPIKey, getServerHost, serverFetch } from './serverConfig';
+import { buildWebSocketUrl, webSocketProtocols } from './serverConfig';
 
 export interface LogEntry {
   seq: number;
@@ -24,27 +24,9 @@ export async function connectLogStream(
   afterSeq: number | null,
   callbacks: LogStreamCallbacks,
 ): Promise<LogStreamHandle> {
-  // Get websocket port from health endpoint
-  const healthResponse = await serverFetch('/health');
-  if (!healthResponse.ok) {
-    throw new Error(`Failed to fetch health: ${healthResponse.status}`);
-  }
-  const health = await healthResponse.json();
-  const wsPort = health.websocket_port;
-  if (typeof wsPort !== 'number') {
-    throw new Error('Server did not advertise a websocket port');
-  }
-
-  const query = new URLSearchParams();
-  const apiKey = getAPIKey();
-  if (apiKey) {
-    query.set('api_key', apiKey);
-  }
-
-  const wsUrl = query.size > 0
-    ? `ws://${getServerHost()}:${wsPort}/logs/stream?${query.toString()}`
-    : `ws://${getServerHost()}:${wsPort}/logs/stream`;
-  const socket = new WebSocket(wsUrl);
+  const protocols = await webSocketProtocols();
+  const wsUrl = buildWebSocketUrl('/logs/stream');
+  const socket = new WebSocket(wsUrl, protocols);
 
   socket.addEventListener('open', () => {
     socket.send(JSON.stringify({
@@ -57,6 +39,7 @@ export async function connectLogStream(
   socket.addEventListener('message', (event) => {
     try {
       const message = JSON.parse(event.data);
+      console.log('[LogStream] Received message type:', message.type, 'entries:', message.entries?.length ?? message.entry?.seq ?? 'n/a');
       if (message.type === 'logs.snapshot') {
         callbacks.onSnapshot(message.entries ?? []);
       } else if (message.type === 'logs.entry' && message.entry) {

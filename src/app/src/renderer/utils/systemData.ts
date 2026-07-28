@@ -11,7 +11,7 @@ interface Devices {
   amd_igpu: GPUDevice;
   cpu: CPUInfo;
   npu: NPUInfo;
-  nvidia_dgpu: GPUDevice[];
+  nvidia_gpu: GPUDevice[];
 }
 
 interface Device {
@@ -39,8 +39,23 @@ export interface Recipes {
   [recipeName: string]: Recipe;
 }
 
+// Per-recipe option schema, generated from the C++ backend descriptor.
+export interface RecipeOptionSchema {
+  name: string;
+  cli_flag: string;
+  default: unknown;
+  type_name: string;
+  help: string;
+  group: string;
+}
+
 export interface Recipe {
   default_backend?: string;
+  // Descriptor metadata (generated from the C++ backend descriptors).
+  display_name?: string;
+  selectable_backend?: boolean;
+  uses_ctx_size?: boolean;
+  options?: RecipeOptionSchema[];
   backends: {
     [backendName: string]: BackendInfo;
   };
@@ -48,7 +63,7 @@ export interface Recipe {
 
 export interface BackendInfo {
   devices: string[];
-  state: 'unsupported' | 'installable' | 'update_required' | 'action_required' | 'installed';
+  state: 'unsupported' | 'installable' | 'update_required' | 'action_required' | 'installed' | 'update_available';
   message: string;
   action: string;
   can_uninstall?: boolean;
@@ -74,6 +89,11 @@ const fetchSystemInfoFromAPI = async (): Promise<SystemData> => {
 
     const data = await response.json();
     const systemInfo: SystemInfo = { ...data };
+
+    // Seed recipe display names from the descriptor-generated /system-info data
+    // so the UI doesn't hardcode per-recipe names.
+    const { updateRecipeDisplayNames } = await import('./recipeNames');
+    updateRecipeDisplayNames(systemInfo.recipes);
 
     return { info: systemInfo };
   } catch (error) {
