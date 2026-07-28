@@ -5,7 +5,7 @@ FROM ubuntu:24.04 AS llamacpp-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG LLAMACPP_VERSION=b9253
+ARG LLAMACPP_VERSION=b10155
 
 RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
 
